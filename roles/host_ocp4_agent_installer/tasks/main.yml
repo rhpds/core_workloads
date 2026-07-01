@@ -134,35 +134,6 @@
         remote_src: true
         owner: "{{ ansible_user }}"
 
-    - name: Inject DNS forwarder for disconnected registry resolution
-      when: disconnected_registry_hostname is defined
-      block:
-        - name: Ensure openshift manifests directory exists
-          ansible.builtin.file:
-            path: "{{ host_ocp4_install_dir }}/openshift"
-            state: directory
-            owner: "{{ ansible_user }}"
-            mode: "0755"
-
-        - name: Create DNS forwarder extra manifest for lab domain
-          ansible.builtin.copy:
-            dest: "{{ host_ocp4_install_dir }}/openshift/99-dns-forwarder.yaml"
-            owner: "{{ ansible_user }}"
-            mode: "0644"
-            content: |
-              apiVersion: operator.openshift.io/v1
-              kind: DNS
-              metadata:
-                name: default
-              spec:
-                servers:
-                  - name: lab-forward
-                    zones:
-                      - {{ host_ocp4_base_domain }}
-                    forwardPlugin:
-                      upstreams:
-                        - {{ host_ocp4_machine_network_cidr | ansible.utils.ipaddr('1') | ansible.utils.ipaddr('address') }}
-
     - name: Create agent ISO
       ansible.builtin.shell:
         cmd: >-
