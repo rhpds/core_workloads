@@ -1,0 +1,39 @@
+apiVersion: v1beta1
+kind: AgentConfig
+metadata:
+  name: {{ host_ocp4_cluster_name }}
+rendezvousIP: {{ _rendezvous_ip }}
+additionalNTPSources:
+{% for ntp in host_ocp4_ntp_sources %}
+  - {{ ntp }}
+{% endfor %}
+hosts:
+{% for host in _bmc_hosts %}
+    - hostname: {{ host.name }}
+      role: {{ host.role }}
+      interfaces:
+        - name: cluster-nic
+          macAddress: {{ host.mac }}
+      networkConfig:
+        interfaces:
+          - name: cluster-nic
+            type: ethernet
+            state: up
+            identifier: mac-address
+            mac-address: {{ host.mac }}
+            ipv4:
+              enabled: true
+              address:
+                - ip: {{ host.ip }}
+                  prefix-length: {{ _prefix_len }}
+              dhcp: false
+        dns-resolver:
+          config:
+            server:
+              - {{ _gateway_ip }}
+        routes:
+          config:
+            - destination: 0.0.0.0/0
+              next-hop-address: {{ _gateway_ip }}
+              next-hop-interface: cluster-nic
+{% endfor %}

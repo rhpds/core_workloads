@@ -1,0 +1,325 @@
+---
+# OCP Agent-Based Installer — runs on bastion, boots nodes via Redfish BMC
+
+- name: Check if cluster already installed
+  ansible.builtin.command:
+    cmd: oc --kubeconfig={{ host_ocp4_install_dir }}/auth/kubeconfig cluster-info
+  register: _ocp_cluster_info
+  failed_when: false
+  changed_when: false
+
+- name: Install OCP cluster
+  when: _ocp_cluster_info.rc != 0
+  block:
+    - name: Determine OCP version URL path
+      ansible.builtin.set_fact:
+        _ocp_version_path: >-
+          {{ (host_ocp4_installer_version | regex_search('^\d+\.\d+\.\d+$'))
+             | ternary(host_ocp4_installer_version, 'stable-' + host_ocp4_installer_version) }}
+
+    - name: Determine OCP version URLs
+      ansible.builtin.set_fact:
+        _ocp_install_url: >-
+          {{ host_ocp4_installer_root_url }}/{{ _ocp_version_path }}/openshift-install-linux.tar.gz
+        _ocp_client_url: >-
+          {{ host_ocp4_installer_root_url }}/{{ _ocp_version_path }}/openshift-client-linux.tar.gz
+
+    - name: Download openshift-install
+      ansible.builtin.unarchive:
+        src: "{{ _ocp_install_url }}"
+        dest: /usr/bin
+        remote_src: true
+        creates: /usr/bin/openshift-install
+      retries: 3
+      delay: 10
+
+    - name: Download oc client
+      ansible.builtin.unarchive:
+        src: "{{ _ocp_client_url }}"
+        dest: /usr/bin
+        remote_src: true
+        creates: /usr/bin/oc
+      retries: 3
+      delay: 10
+
+    - name: Compute cluster topology facts
+      ansible.builtin.set_fact:
+        _cp_count: "{{ vms | dict2items | selectattr('value.role', 'eq', 'control-plane') | list | length }}"
+        _worker_count: 0
+        _machine_net: "{{ host_ocp4_machine_network_cidr | ansible.utils.ipaddr('network/prefix') }}"
+
+    - name: Compute network facts
+      ansible.builtin.set_fact:
+        _prefix_len: "{{ _machine_net.split('/')[1] }}"
+        _gateway_ip: "{{ _machine_net | ansible.utils.ipaddr('1') | ansible.utils.ipaddr('address') }}"
+        _rendezvous_ip: "{{ host_ocp4_api_vip }}"
+
+    - name: Get deployed topology from Troshka
+      troshka.cloud.project_info:
+        api_url: "{{ troshka_api_url }}"
+        api_key: "{{ troshka_api_key }}"
+        project_id: "{{ troshka_project_id }}"
+      register: _project_topo
+      delegate_to: localhost
+      become: false
+
+    - name: Build BMC host list from deployed topology
+      ansible.builtin.set_fact:
+        _bmc_hosts: >-
+          {{ _bmc_hosts | default([]) + [{
+            'name': item.data.name,
+            'role': 'master' if item.data.tags.AnsibleGroup | default('') == 'controllers' else 'worker',
+            'ip': item.data.nics[0].ip,
+            'mac': item.data.nics[0].mac,
+            'bmc_ip': item.data.bmcIp | default('')
+          }] }}
+      loop: >-
+        {{ _project_topo.topology.nodes
+           | selectattr('type', 'equalto', 'vmNode')
+           | selectattr('data.tags.AnsibleGroup', 'defined')
+           | selectattr('data.tags.AnsibleGroup', 'in', ['controllers', 'workers'])
+           | list }}
+      loop_control:
+        label: "{{ item.data.name }}"
+
+    - name: Build BMC IP list
+      ansible.builtin.set_fact:
+        _bmc_ip_list: "{{ host_ocp4_bmc_ips if host_ocp4_bmc_ips | length > 0 else _bmc_hosts | map(attribute='bmc_ip') | select('ne', '') | list }}"
+
+    - name: Create install directory
+      ansible.builtin.file:
+        path: "{{ host_ocp4_install_dir }}"
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0755"
+
+    - name: Merge registry credentials into pull secret
+      ansible.builtin.set_fact:
+        host_ocp4_pull_secret: >-
+          {{ host_ocp4_pull_secret | from_json
+             | combine({'auths': (host_ocp4_pull_secret | from_json).get('auths', {})
+               | combine({disconnected_registry_hostname + ':' + (disconnected_registry_port | default(8443) | string):
+                 {'auth': (disconnected_registry_user | default('admin') + ':' + disconnected_registry_password) | b64encode}})},
+               recursive=true) | to_json }}
+      when: disconnected_registry_hostname is defined
+
+    - name: Generate install-config.yaml
+      ansible.builtin.template:
+        src: install-config.yaml.j2
+        dest: "{{ host_ocp4_install_dir }}/install-config.yaml"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0644"
+
+    - name: Backup install-config.yaml
+      ansible.builtin.copy:
+        src: "{{ host_ocp4_install_dir }}/install-config.yaml"
+        dest: "{{ host_ocp4_install_dir }}/install-config.yaml.bak"
+        remote_src: true
+        owner: "{{ ansible_user }}"
+
+    - name: Generate agent-config.yaml
+      ansible.builtin.template:
+        src: agent-config.yaml.j2
+        dest: "{{ host_ocp4_install_dir }}/agent-config.yaml"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0644"
+
+    - name: Backup agent-config.yaml
+      ansible.builtin.copy:
+        src: "{{ host_ocp4_install_dir }}/agent-config.yaml"
+        dest: "{{ host_ocp4_install_dir }}/agent-config.yaml.bak"
+        remote_src: true
+        owner: "{{ ansible_user }}"
+
+    - name: Inject DNS forwarder for disconnected registry resolution
+      when: disconnected_registry_hostname is defined
+      block:
+        - name: Ensure openshift manifests directory exists
+          ansible.builtin.file:
+            path: "{{ host_ocp4_install_dir }}/openshift"
+            state: directory
+            owner: "{{ ansible_user }}"
+            mode: "0755"
+
+        - name: Create DNS forwarder extra manifest for lab domain
+          ansible.builtin.copy:
+            dest: "{{ host_ocp4_install_dir }}/openshift/99-dns-forwarder.yaml"
+            owner: "{{ ansible_user }}"
+            mode: "0644"
+            content: |
+              apiVersion: operator.openshift.io/v1
+              kind: DNS
+              metadata:
+                name: default
+              spec:
+                servers:
+                  - name: lab-forward
+                    zones:
+                      - {{ host_ocp4_base_domain }}
+                    forwardPlugin:
+                      upstreams:
+                        - {{ host_ocp4_machine_network_cidr | ansible.utils.ipaddr('1') | ansible.utils.ipaddr('address') }}
+
+    - name: Create agent ISO
+      ansible.builtin.shell:
+        cmd: >-
+          openshift-install agent create image --dir {{ host_ocp4_install_dir }} --log-level debug
+          2>&1 | tee -a ~{{ ansible_user }}/install.log
+      become_user: "{{ ansible_user }}"
+      register: _create_image
+      changed_when: true
+
+    - name: Download RHCOS images for assisted-image-service
+      ansible.builtin.get_url:
+        url: "{{ item }}"
+        dest: "{{ host_ocp4_install_dir }}/{{ item | basename }}"
+        mode: "0644"
+      retries: 3
+      delay: 10
+      loop: "{{ host_ocp4_rhcos_images }}"
+      when: host_ocp4_rhcos_images | default([]) | length > 0
+
+    - name: Open HTTP port for assisted-image-service
+      ansible.builtin.shell:
+        cmd: >-
+          firewall-cmd --add-port={{ host_ocp4_iso_http_port }}/tcp &&
+          firewall-cmd --add-port={{ host_ocp4_iso_http_port }}/tcp --permanent
+      changed_when: true
+      failed_when: false
+
+    - name: Start HTTP server for agent ISO and RHCOS images
+      ansible.builtin.shell:
+        cmd: >-
+          cd {{ host_ocp4_install_dir }} &&
+          nohup python3 -m http.server {{ host_ocp4_iso_http_port }}
+          > /tmp/ocp-iso-http.log 2>&1 &
+          echo $!
+      register: _http_pid
+      changed_when: true
+
+    - name: Get bastion IP on BMC network for ISO serving
+      ansible.builtin.shell:
+        cmd: ip -4 -o addr | awk '{print $4}' | cut -d/ -f1
+      register: _all_ips
+      changed_when: false
+
+    - name: Select bastion IP reachable from BMC network
+      ansible.builtin.set_fact:
+        _bastion_ip: >-
+          {{ _all_ips.stdout_lines
+             | select('match', '^' + _bmc_subnet_prefix)
+             | first
+             | default(ansible_facts.default_ipv4.address | default(ansible_host)) }}
+      vars:
+        _bmc_subnet_prefix: "{{ (host_ocp4_bmc_cidr | default('192.168.50.0/24')).rsplit('.', 1)[0] }}"
+
+    - name: Find BMC network interface
+      ansible.builtin.shell:
+        cmd: ip -4 -o addr | grep '{{ _bastion_ip }}/' | awk '{print $2}'
+      register: _bmc_iface
+      changed_when: false
+
+    - name: Allow all traffic on BMC interface
+      ansible.builtin.shell:
+        cmd: >-
+          firewall-cmd --zone=trusted --change-interface={{ _bmc_iface.stdout | trim }} &&
+          firewall-cmd --zone=trusted --change-interface={{ _bmc_iface.stdout | trim }} --permanent
+      when: _bmc_iface.stdout | trim | length > 0
+      changed_when: true
+      failed_when: false
+
+    - name: Boot nodes via Redfish BMC
+      ansible.builtin.include_tasks: boot_via_bmc.yml
+      loop: "{{ _bmc_ip_list }}"
+      loop_control:
+        loop_var: _bmc_ip
+
+    - name: Wait for OCP install to complete
+      ansible.builtin.shell:
+        cmd: >-
+          openshift-install agent wait-for install-complete
+          --dir {{ host_ocp4_install_dir }} --log-level debug
+          2>&1 | tee -a ~{{ ansible_user }}/install.log
+      become_user: "{{ ansible_user }}"
+      register: _install_result
+      timeout: "{{ host_ocp4_install_timeout }}"
+      changed_when: true
+      vars:
+        troshka_timeout: "{{ host_ocp4_install_timeout | int + 60 }}"
+
+    - name: Eject ISO from BMC nodes
+      ansible.builtin.include_tasks: eject_iso.yml
+      loop: "{{ _bmc_ip_list }}"
+      loop_control:
+        loop_var: _bmc_ip
+
+- name: Set up kubeconfig
+  block:
+    - name: Create .kube directory
+      ansible.builtin.file:
+        path: "~{{ item }}/.kube"
+        state: directory
+        owner: "{{ item }}"
+        mode: "0700"
+      loop:
+        - "{{ ansible_user }}"
+        - root
+
+    - name: Copy kubeconfig
+      ansible.builtin.copy:
+        src: "{{ host_ocp4_install_dir }}/auth/kubeconfig"
+        dest: "~{{ item }}/.kube/config"
+        remote_src: true
+        owner: "{{ item }}"
+        mode: "0600"
+      loop:
+        - "{{ ansible_user }}"
+        - root
+
+    - name: Ensure student user exists
+      ansible.builtin.user:
+        name: "{{ student_name }}"
+        password: "{{ common_password | password_hash('sha512') }}"
+        groups: wheel
+        append: true
+        state: present
+      when: student_name is defined
+
+    - name: Set up student user kubeconfig
+      when: student_name is defined
+      block:
+        - name: Create student .kube directory
+          ansible.builtin.file:
+            path: "~{{ student_name }}/.kube"
+            state: directory
+            owner: "{{ student_name }}"
+            mode: "0700"
+
+        - name: Copy kubeconfig to student
+          ansible.builtin.copy:
+            src: "{{ host_ocp4_install_dir }}/auth/kubeconfig"
+            dest: "~{{ student_name }}/.kube/config"
+            remote_src: true
+            owner: "{{ student_name }}"
+            mode: "0600"
+
+    - name: Add KUBECONFIG to bashrc
+      ansible.builtin.lineinfile:
+        path: "~{{ ansible_user }}/.bashrc"
+        line: "export KUBECONFIG={{ host_ocp4_install_dir }}/auth/kubeconfig"
+        state: present
+
+    - name: Read kubeadmin password
+      ansible.builtin.slurp:
+        src: "{{ host_ocp4_install_dir }}/auth/kubeadmin-password"
+      register: _kubeadmin_pw
+
+    - name: Display cluster info
+      ansible.builtin.debug:
+        msg:
+          - "OCP cluster installed successfully"
+          - "Console: https://console-openshift-console.apps.{{ host_ocp4_cluster_name }}.{{ host_ocp4_base_domain }}"
+          - "kubeadmin password: {{ _kubeadmin_pw.content | b64decode }}"
