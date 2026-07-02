@@ -134,6 +134,45 @@
         remote_src: true
         owner: "{{ ansible_user }}"
 
+    - name: Inject /etc/hosts for disconnected registry resolution
+      when: disconnected_registry_hostname is defined
+      block:
+        - name: Ensure openshift manifests directory exists
+          ansible.builtin.file:
+            path: "{{ host_ocp4_install_dir }}/openshift"
+            state: directory
+            owner: "{{ ansible_user }}"
+            mode: "0755"
+
+        - name: Resolve registry IP from bastion internal IP
+          ansible.builtin.set_fact:
+            _registry_ip: "{{ hostvars[groups.bastions | first].troshka_internal_ip | default('') }}"
+
+        - name: Create /etc/hosts MachineConfig extra manifest
+          when: _registry_ip | length > 0
+          ansible.builtin.copy:
+            dest: "{{ host_ocp4_install_dir }}/openshift/99-lab-etc-hosts.yaml"
+            owner: "{{ ansible_user }}"
+            mode: "0644"
+            content: |
+              apiVersion: machineconfiguration.openshift.io/v1
+              kind: MachineConfig
+              metadata:
+                labels:
+                  machineconfiguration.openshift.io/role: master
+                name: 99-lab-etc-hosts
+              spec:
+                config:
+                  ignition:
+                    version: 3.2.0
+                  storage:
+                    files:
+                      - path: /etc/hosts
+                        mode: 0644
+                        overwrite: false
+                        append:
+                          - source: "data:,{{ _registry_ip | trim }}%09{{ disconnected_registry_hostname }}%0A"
+
     - name: Create agent ISO
       ansible.builtin.shell:
         cmd: >-
