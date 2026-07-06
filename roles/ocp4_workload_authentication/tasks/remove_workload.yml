@@ -42,7 +42,7 @@
 
 - name: Remove ROSA identity provider
   when: _ocp4_workload_authentication_auth_method == 'rosa'
-  delegate_to: "{{ groups['bastions'][0] }}"
+  delegate_to: "{{ (groups['bastions'] | default(['localhost']))[0] }}"
   ansible.builtin.command: >-
     rosa delete idp {{ ocp4_workload_authentication_keycloak_default_realm }}
     --cluster {{ ocp4_workload_authentication_rosa_cluster_name | default('rosa-' ~ guid) }}
