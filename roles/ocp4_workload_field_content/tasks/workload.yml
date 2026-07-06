@@ -60,6 +60,26 @@
         enabled: false
   when: not (_litemaas_available | bool)
 
+- name: Built list of user
+  ansible.builtin.set_fact:
+    # Set password in list to provided password generated value if not set.
+    _ocp4_workload_field_content_multi_user_usernames: >-
+      {{
+        (_ocp4_workload_field_content_multi_user_usernames | default([])) + [{"username": "user" ~ _n}]
+      }}
+  loop: "{{ range(1, num_users | int + 1) | list }}"
+  loop_control:
+    loop_var: _n
+  when: (create_multi_user | bool) | default(false)
+
+- name: Add multi_user informations to Helm values (if available)
+  ansible.builtin.set_fact:
+    _ocp4_workload_field_content_multi_user_values:
+      multi_user:
+        num_users: "{{ num_users | default(1) }}"
+        users: "{{ _ocp4_workload_field_content_multi_user_usernames | default([]) }}"
+  when: (create_multi_user | bool) | default(false)
+
 - name: Combine all Helm values
   ansible.builtin.set_fact:
     _ocp4_workload_field_content_all_values: >-
@@ -67,6 +87,7 @@
         ocp4_workload_field_content_helm_values | default({})
         | combine(_ocp4_workload_field_content_deployer_values)
         | combine(_ocp4_workload_field_content_litemaas_values)
+        | combine(_ocp4_workload_field_content_multi_user_values | default({}))
       }}
 
 - name: Debug final Helm values
