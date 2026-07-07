@@ -103,9 +103,9 @@
 
 - name: Create OpenShift identity provider (ROSA)
   when: _ocp4_workload_authentication_auth_method == 'rosa'
-  delegate_to: "{{ groups['bastions'][0] }}"
   block:
   - name: Delete existing ROSA IdP if present
+    delegate_to: "{{ groups['bastions'][0] }}"
     ansible.builtin.command: >-
       rosa delete idp {{ ocp4_workload_authentication_keycloak_default_realm }}
       --cluster {{ ocp4_workload_authentication_rosa_cluster_name | default('rosa-' ~ guid) }}
@@ -113,6 +113,7 @@
     failed_when: false
 
   - name: Create ROSA OpenID identity provider
+    delegate_to: "{{ groups['bastions'][0] }}"
     ansible.builtin.command: >-
       rosa create idp
       --cluster {{ ocp4_workload_authentication_rosa_cluster_name | default('rosa-' ~ guid) }}

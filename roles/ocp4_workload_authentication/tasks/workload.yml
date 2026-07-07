@@ -54,7 +54,7 @@
   when:
   - ocp4_workload_authentication_remove_kubeadmin | bool
   - _ocp4_workload_authentication_auth_method == 'rosa'
-  delegate_to: "{{ groups['bastions'][0] }}"
+  delegate_to: "{{ (groups['bastions'] | default(['localhost']))[0] }}"
   ansible.builtin.command: >-
     rosa delete admin
     --cluster {{ ocp4_workload_authentication_rosa_cluster_name | default('rosa-' ~ guid) }}
