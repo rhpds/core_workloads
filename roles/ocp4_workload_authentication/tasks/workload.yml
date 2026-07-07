@@ -59,7 +59,5 @@
     rosa delete admin
     --cluster {{ ocp4_workload_authentication_rosa_cluster_name | default('rosa-' ~ guid) }}
     --yes
+  changed_when: false
   failed_when: false
-
-- name: Report provision data and messages
-  ansible.builtin.include_tasks: report_data_and_messages.yml
