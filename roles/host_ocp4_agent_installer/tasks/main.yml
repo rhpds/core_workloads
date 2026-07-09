@@ -165,13 +165,21 @@
                 config:
                   ignition:
                     version: 3.2.0
-                  storage:
-                    files:
-                      - path: /etc/hosts
-                        mode: 0644
-                        overwrite: false
-                        append:
-                          - source: "data:,{{ _registry_ip | trim }}%09{{ disconnected_registry_hostname }}%0A"
+                  systemd:
+                    units:
+                      - name: lab-etc-hosts.service
+                        enabled: true
+                        contents: |
+                          [Unit]
+                          Description=Add lab DNS entries to /etc/hosts
+                          Before=crio.service kubelet.service
+                          After=network-online.target
+                          [Service]
+                          Type=oneshot
+                          RemainAfterExit=yes
+                          ExecStart=/bin/bash -c 'grep -q {{ disconnected_registry_hostname }} /etc/hosts || echo {{ _registry_ip | trim }} {{ disconnected_registry_hostname }} >> /etc/hosts'
+                          [Install]
+                          WantedBy=multi-user.target
 
     - name: Create agent ISO
       ansible.builtin.shell:
