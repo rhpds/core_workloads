@@ -295,7 +295,7 @@
       vars:
         _bmc_iso_name: imagebasedconfig.iso
 
-    # ── Phase 4: Wait for cluster ready ─────────────────────────────────────
+    # ── Phase 4: Wait for cluster ready ────────────────────────────────
     - name: Wait for OCP cluster to come up
       ansible.builtin.shell:
         cmd: >-

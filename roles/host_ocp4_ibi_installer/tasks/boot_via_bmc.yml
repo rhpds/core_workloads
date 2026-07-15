@@ -4,7 +4,7 @@
 
 - name: Get Redfish system ID - {{ _bmc_ip }}
   ansible.builtin.uri:
-    url: "http://{{ _bmc_ip }}:8000/redfish/v1/Systems"
+    url: "http://{{ _bmc_ip }}:{{ _ibi_bmc_port }}/redfish/v1/Systems"
     user: "{{ host_ocp4_bmc_user }}"
     password: "{{ host_ocp4_bmc_password }}"
     force_basic_auth: true
@@ -17,7 +17,7 @@
 
 - name: Insert virtual media ISO - {{ _bmc_ip }}
   ansible.builtin.uri:
-    url: "http://{{ _bmc_ip }}:8000/redfish/v1/Systems/{{ _sys_id }}/VirtualMedia/Cd/Actions/VirtualMedia.InsertMedia"
+    url: "http://{{ _bmc_ip }}:{{ _ibi_bmc_port }}/redfish/v1/Systems/{{ _sys_id }}/VirtualMedia/Cd/Actions/VirtualMedia.InsertMedia"
     method: POST
     user: "{{ host_ocp4_bmc_user }}"
     password: "{{ host_ocp4_bmc_password }}"
@@ -31,7 +31,7 @@
 
 - name: Reboot node from ISO - {{ _bmc_ip }}
   ansible.builtin.uri:
-    url: "http://{{ _bmc_ip }}:8000/redfish/v1/Systems/{{ _sys_id }}/Actions/ComputerSystem.Reset"
+    url: "http://{{ _bmc_ip }}:{{ _ibi_bmc_port }}/redfish/v1/Systems/{{ _sys_id }}/Actions/ComputerSystem.Reset"
     method: POST
     user: "{{ host_ocp4_bmc_user }}"
     password: "{{ host_ocp4_bmc_password }}"

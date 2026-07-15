@@ -4,7 +4,7 @@
 
 - name: Get Redfish system ID for eject - {{ _bmc_ip }}
   ansible.builtin.uri:
-    url: "http://{{ _bmc_ip }}:8000/redfish/v1/Systems"
+    url: "http://{{ _bmc_ip }}:{{ _ibi_bmc_port }}/redfish/v1/Systems"
     user: "{{ host_ocp4_bmc_user }}"
     password: "{{ host_ocp4_bmc_password }}"
     force_basic_auth: true
@@ -22,7 +22,7 @@
   when: _redfish_systems_eject is success
   ansible.builtin.uri:
     url: >-
-      http://{{ _bmc_ip }}:8000/redfish/v1/Systems/{{
+      http://{{ _bmc_ip }}:{{ _ibi_bmc_port }}/redfish/v1/Systems/{{
       _sys_id_eject }}/VirtualMedia/Cd/Actions/VirtualMedia.EjectMedia
     method: POST
     user: "{{ host_ocp4_bmc_user }}"
