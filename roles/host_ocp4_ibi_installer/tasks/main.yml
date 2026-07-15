@@ -257,9 +257,16 @@
         return_content: true
       register: _sys_for_off
 
+    - name: Extract system ID for power-off
+      ansible.builtin.set_fact:
+        _sys_id_off: >-
+          {{ _sys_for_off.json.Members[0]['@odata.id'].split('/')[-1] }}
+
     - name: Send ForceOff to VM
       ansible.builtin.uri:
-        url: "http://{{ _bmc_ip_list[0] }}:{{ _ibi_bmc_port }}/redfish/v1/Systems/{{ _sys_for_off.json.Members[0]['@odata.id'].split('/')[-1] }}/Actions/ComputerSystem.Reset"
+        url: >-
+          http://{{ _bmc_ip_list[0] }}:{{ _ibi_bmc_port }}/redfish/v1/Systems/{{
+          _sys_id_off }}/Actions/ComputerSystem.Reset
         method: POST
         user: "{{ host_ocp4_bmc_user }}"
         password: "{{ host_ocp4_bmc_password }}"

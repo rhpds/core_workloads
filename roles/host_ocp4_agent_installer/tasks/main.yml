@@ -177,7 +177,10 @@
                           [Service]
                           Type=oneshot
                           RemainAfterExit=yes
-                          ExecStart=/bin/bash -c 'grep -q {{ disconnected_registry_hostname }} /etc/hosts || echo {{ _registry_ip | trim }} {{ disconnected_registry_hostname }} >> /etc/hosts'
+                          ExecStart=/bin/bash -c \
+                            'grep -q {{ disconnected_registry_hostname }} /etc/hosts \
+                            || echo {{ _registry_ip | trim }} {{ disconnected_registry_hostname }} \
+                            >> /etc/hosts'
                           [Install]
                           WantedBy=multi-user.target
 
