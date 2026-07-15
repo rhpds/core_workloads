@@ -182,8 +182,11 @@
     status_code: 200
   register: r_stackrox_central_check
   until: r_stackrox_central_check.status == 200
-  retries: 60
-  delay: 5
+  # 30 minutes: a transient NXDOMAIN for the route hostname can be
+  # negative-cached along the resolver chain well past the old 5-minute
+  # budget (dyn.redhatworkshops.io SOA minimum is 24h)
+  retries: 90
+  delay: 20
 
 # ACS Secured Cluster (Sensor) Installation
 - name: Get cluster init bundle
