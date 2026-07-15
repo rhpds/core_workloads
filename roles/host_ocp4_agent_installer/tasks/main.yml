@@ -118,6 +118,7 @@
         dest: "{{ host_ocp4_install_dir }}/install-config.yaml.bak"
         remote_src: true
         owner: "{{ ansible_user }}"
+        mode: "0644"
 
     - name: Generate agent-config.yaml
       ansible.builtin.template:
@@ -133,6 +134,7 @@
         dest: "{{ host_ocp4_install_dir }}/agent-config.yaml.bak"
         remote_src: true
         owner: "{{ ansible_user }}"
+        mode: "0644"
 
     - name: Inject /etc/hosts for disconnected registry resolution
       when: disconnected_registry_hostname is defined
@@ -187,8 +189,11 @@
     - name: Create agent ISO
       ansible.builtin.shell:
         cmd: >-
+          set -o pipefail;
           openshift-install agent create image --dir {{ host_ocp4_install_dir }} --log-level debug
           2>&1 | tee -a ~{{ ansible_user }}/install.log
+        executable: /bin/bash
+      become: true
       become_user: "{{ ansible_user }}"
       register: _create_image
       changed_when: true
@@ -223,7 +228,10 @@
 
     - name: Get bastion IP on BMC network for ISO serving
       ansible.builtin.shell:
-        cmd: ip -4 -o addr | awk '{print $4}' | cut -d/ -f1
+        cmd: >-
+          set -o pipefail;
+          ip -4 -o addr | awk '{print $4}' | cut -d/ -f1
+        executable: /bin/bash
       register: _all_ips
       changed_when: false
 
@@ -239,7 +247,10 @@
 
     - name: Find BMC network interface
       ansible.builtin.shell:
-        cmd: ip -4 -o addr | grep '{{ _bastion_ip }}/' | awk '{print $2}'
+        cmd: >-
+          set -o pipefail;
+          ip -4 -o addr | grep '{{ _bastion_ip }}/' | awk '{print $2}'
+        executable: /bin/bash
       register: _bmc_iface
       changed_when: false
 
@@ -261,9 +272,12 @@
     - name: Wait for OCP install to complete
       ansible.builtin.shell:
         cmd: >-
+          set -o pipefail;
           openshift-install agent wait-for install-complete
           --dir {{ host_ocp4_install_dir }} --log-level debug
           2>&1 | tee -a ~{{ ansible_user }}/install.log
+        executable: /bin/bash
+      become: true
       become_user: "{{ ansible_user }}"
       register: _install_result
       timeout: "{{ host_ocp4_install_timeout }}"

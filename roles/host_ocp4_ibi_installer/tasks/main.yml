@@ -139,9 +139,12 @@
     - name: Create installation ISO
       ansible.builtin.shell:
         cmd: >-
+          set -o pipefail;
           openshift-install image-based create image
           --dir {{ host_ocp4_ibi_install_dir }} --log-level debug
           2>&1 | tee -a ~{{ ansible_user }}/ibi-install.log
+        executable: /bin/bash
+      become: true
       become_user: "{{ ansible_user }}"
       register: _ibi_create_iso
       changed_when: true
@@ -190,11 +193,13 @@
     - name: Wait for IBI seed restore to complete
       ansible.builtin.shell:
         cmd: >-
+          set -o pipefail;
           ssh -i /home/{{ ansible_user }}/.ssh/ibi_key
           -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5
           core@{{ _ibi_target_ip }}
           "journalctl -u install-rhcos-and-restore-seed --no-pager -q 2>/dev/null | tail -3"
           2>&1
+        executable: /bin/bash
       register: _ibi_seed_check
       until: >-
         'finished successfully' in (_ibi_seed_check.stdout | default(''))
@@ -228,9 +233,12 @@
     - name: Create configuration ISO
       ansible.builtin.shell:
         cmd: >-
+          set -o pipefail;
           openshift-install image-based create config-image
           --dir {{ host_ocp4_ibi_config_dir }} --log-level debug
           2>&1 | tee -a ~{{ ansible_user }}/ibi-install.log
+        executable: /bin/bash
+      become: true
       become_user: "{{ ansible_user }}"
       register: _ibi_config_iso
       changed_when: true
@@ -242,11 +250,11 @@
         loop_var: _bmc_ip
 
     - name: Serve config ISO via HTTP
-      ansible.builtin.shell:
-        cmd: >-
-          cp {{ host_ocp4_ibi_config_dir }}/imagebasedconfig.iso
-          {{ host_ocp4_ibi_install_dir }}/imagebasedconfig.iso
-      changed_when: true
+      ansible.builtin.copy:
+        src: "{{ host_ocp4_ibi_config_dir }}/imagebasedconfig.iso"
+        dest: "{{ host_ocp4_ibi_install_dir }}/imagebasedconfig.iso"
+        remote_src: true
+        mode: "0644"
 
     - name: Power off VM before attaching config ISO
       ansible.builtin.uri:
