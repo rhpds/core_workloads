@@ -39,6 +39,12 @@ ocp4_workload_ansible_automation_platform_token_lifecycle_retries: 5
 ocp4_workload_ansible_automation_platform_deploy_wait_timeout: 1800
 ocp4_workload_ansible_automation_platform_manifest_inject_retries: 3
 ocp4_workload_ansible_automation_platform_manifest_inject_delay: 5
+# Override to use an internal service URL for manifest injection.
+# When set, bypasses the external route hostname (useful when ingress
+# is slow to come up or unreachable from the deployer pod).
+# Example: "aap.aap.svc.cluster.local"
+ocp4_workload_ansible_automation_platform_manifest_inject_host: ""
+ocp4_workload_ansible_automation_platform_manifest_inject_validate_certs: true
 # Additional manifest overrides to be merged into the Template used to deploy AAP
 ocp4_workload_ansible_automation_platform_aap_manifest_overrides: {}
 
