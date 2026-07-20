@@ -1,0 +1,23 @@
+---
+apiVersion: cluster.open-cluster-management.io/v1
+kind: ManagedCluster
+metadata:
+  name: {{ _ocp_workload_rhacm_hcp_cluster_name }}
+  annotations:
+    import.open-cluster-management.io/hosting-cluster-name: local-cluster
+    import.open-cluster-management.io/klusterlet-deploy-mode: Hosted
+    open-cluster-management/created-via: AgnosticD
+  labels:
+    name: {{ _ocp_workload_rhacm_hcp_cluster_name }}
+    cloud: auto-detect
+    cluster.open-cluster-management.io/clusterset: default
+    vendor: OpenShift
+{% if _ocp_workload_rhacm_hcp_cluster_labels | default("") | length > 0 %}
+    {{ _ocp_workload_rhacm_hcp_cluster_labels | to_nice_yaml | indent(4) }}
+{% endif %}
+{% if ocp_workload_rhacm_hcp_managed_cluster_set_setup | bool %}
+    cluster.open-cluster-management.io/clusterset: {{ ocp_workload_rhacm_hcp_managed_cluster_set_name }}
+{% endif %}
+spec:
+  hubAcceptsClient: true
+  leaseDurationSeconds: 60

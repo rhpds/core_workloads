@@ -1,0 +1,16 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hypershift-override-images
+  namespace: local-cluster
+data:
+  apiserver-network-proxy: {{ ocp_workload_rhacm_hcp_hcp_registry }}/apiserver-network-proxy-rhel8:{{ ocp_workload_rhacm_hcp_apiserver_network_proxy_image_tag }}
+  aws-encryption-provider: {{ ocp_workload_rhacm_hcp_hcp_registry }}/aws-encryption-provider-rhel8:{{ ocp_workload_rhacm_hcp_aws_encryption_provider_image_tag }}
+  cluster-api: {{ ocp_workload_rhacm_hcp_hcp_registry }}/cluster-api-rhel8:{{ ocp_workload_rhacm_hcp_cluster_api_image_tag }}
+  cluster-api-provider-agent: {{ ocp_workload_rhacm_hcp_hcp_registry }}/cluster-api-provider-agent-rhel8:{{ ocp_workload_rhacm_hcp_cluster_api_provider_agent_image_tag }}
+  cluster-api-provider-aws: {{ ocp_workload_rhacm_hcp_hcp_registry }}/cluster-api-provider-aws-rhel8:{{ ocp_workload_rhacm_hcp_cluster_api_provider_aws_image_tag }}
+  cluster-api-provider-azure: {{ ocp_workload_rhacm_hcp_hcp_registry }}/cluster-api-provider-azure-rhel8:{{ ocp_workload_rhacm_hcp_cluster_api_provider_azure_image_tag }}
+  cluster-api-provider-kubevirt: {{ ocp_workload_rhacm_hcp_hcp_registry }}/cluster-api-provider-kubevirt-rhel8:{{ ocp_workload_rhacm_hcp_cluster_api_provider_kubevirt_image_tag }}
+  hypershift-cli: {{ ocp_workload_rhacm_hcp_hcp_registry }}/hypershift-cli-rhel8:{{ ocp_workload_rhacm_hcp_hypershift_cli_image_tag }}
+  hypershift-operator: {{ ocp_workload_rhacm_hcp_hcp_registry }}/hypershift-rhel8-operator:{{ ocp_workload_rhacm_hcp_hypershift_operator_image_tag }}
