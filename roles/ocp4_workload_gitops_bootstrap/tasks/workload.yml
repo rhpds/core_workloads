@@ -62,6 +62,21 @@
 #   annotations:
 #     argocd.argoproj.io/tracking-id: 'bootstrap:argoproj.io/Application:openshift-gitops/infra-bootstrap'
 
+- name: Trigger immediate sync on bootstrap ArgoCD application
+  kubernetes.core.k8s:
+    api_version: argoproj.io/v1alpha1
+    kind: Application
+    name: "{{ ocp4_workload_gitops_bootstrap_final_application_name }}"
+    namespace: "{{ ocp4_workload_gitops_bootstrap_namespace }}"
+    merge_type: merge
+    definition:
+      operation:
+        initiatedBy:
+          username: admin
+        sync:
+          syncStrategy:
+            hook: {}
+
 - name: Wait until bootstrap ArgoCD application is healthy and synced
   kubernetes.core.k8s_info:
     api_version: argoproj.io/v1alpha1
