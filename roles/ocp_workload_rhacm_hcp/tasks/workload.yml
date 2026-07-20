@@ -272,7 +272,7 @@
     label: "{{ item.name }}"
 
 - name: Save user data for S3 bucket
-  agnosticd_user_info:
+  agnosticd.core.agnosticd_user_info:
     data:
       hypershift_s3_bucket_name: "{{ ocp_workload_rhacm_hcp_s3_bucket_name }}"
       hypershift_s3_region: "{{ ocp_workload_rhacm_hcp_s3_bucket_region }}"
