@@ -1,9 +1,4 @@
 ---
-# Implement your Workload removal tasks here
-- name: Removing workload for user
-  ansible.builtin.debug:
-    msg: "Removing workload for user ocp_username = {{ ocp_username }} - not implemented"
-
 - name: Remove role-policy hcp-cli-role, trust-relationship.json
   environment:
     AWS_ACCESS_KEY_ID: "{{ aws_access_key_id }}"
@@ -42,9 +37,3 @@
        --policy-name trust-relationship.json
        --policy-document file://awspolicy-hcp-cli-role.json
   ignore_errors: true
-
-# Leave this as the last task in the playbook.
-- name: Remove_workload tasks complete
-  when: not silent|bool
-  ansible.builtin.debug:
-    msg: "Remove Workload tasks completed successfully."

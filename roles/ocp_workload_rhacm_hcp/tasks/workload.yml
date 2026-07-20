@@ -2,7 +2,6 @@
 #############################################################################
 # Prerequisite Checks
 #############################################################################
-
 - name: Ensure RHACM MultiClusterHub is deployed
   kubernetes.core.k8s_info:
     api_version: "operator.open-cluster-management.io/v1"
@@ -85,32 +84,31 @@
 - name: Create s3 credentials secret
   kubernetes.core.k8s:
     state: present
-    definition: "{{ lookup('template', 'secret-s3-credentials.yaml.j2') }}"
+    template: secret-s3-credentials.yaml.j2
 
 - name: Generate an OpenSSH keypair for HyperShift
   community.crypto.openssh_keypair:
-    path: "~{{ ansible_user }}/.ssh/{{ ocp_workload_rhacm_key_pair_name }}"
+    path: "/tmp/{{ ocp_workload_rhacm_key_pair_name }}"
   register: r_hypershift_key
 
 - name: Read private key from filesystem
   ansible.builtin.slurp:
-    src: "~{{ ansible_user }}/.ssh/{{ ocp_workload_rhacm_key_pair_name }}"
+    src: "/tmp/{{ ocp_workload_rhacm_key_pair_name }}"
   register: r_hypershift_private_key
 
 - name: Read public key from filesystem
   ansible.builtin.slurp:
-    src: "~{{ ansible_user }}/.ssh/{{ ocp_workload_rhacm_key_pair_name }}.pub"
+    src: "/tmp/{{ ocp_workload_rhacm_key_pair_name }}.pub"
   register: r_hypershift_public_key
 
 - name: Create hypershift aws credentials secret
   kubernetes.core.k8s:
     state: present
-    definition: "{{ lookup('template', 'secret-aws-credentials.yaml.j2') }}"
+    template: secret-aws-credentials.yaml.j2
 
 #############################################################################
 # Install HCP CLI
 #############################################################################
-
 - name: Wait until HCP CLI download deployment is ready
   kubernetes.core.k8s_info:
     api_version: v1
@@ -125,67 +123,69 @@
   - r_hcp_cli_deployment.resources[0].status.readyReplicas is defined
   - r_hcp_cli_deployment.resources[0].status.readyReplicas | int == r_hcp_cli_deployment.resources[0].spec.replicas | int
 
-- name: Get HCP CLI download URL
-  kubernetes.core.k8s_info:
-    api_version: console.openshift.io/v1
-    kind: ConsoleCLIDownload
-    name: hcp-cli-download
-  register: r_hcp_cli_download
-  retries: 20
-  delay: 10
-  until: r_hcp_cli_download.resources | length > 0
+- name: Run on Bastion
+  delegate_to: "{{ (groups['bastions'] | default(['localhost']))[0] }}"
+  block:
+  - name: Get HCP CLI download URL
+    kubernetes.core.k8s_info:
+      api_version: console.openshift.io/v1
+      kind: ConsoleCLIDownload
+      name: hcp-cli-download
+    register: r_hcp_cli_download
+    retries: 20
+    delay: 10
+    until: r_hcp_cli_download.resources | length > 0
 
-- name: Set HCP CLI download URL
-  when: r_hcp_cli_download.resources | length > 0
-  ansible.builtin.set_fact:
-    _ocp_workload_rhacm_hcp_cli_url: >-
-      {{ r_hcp_cli_download.resources[0] | to_json | from_json
-      | json_query("spec.links[?contains(href,'/linux/amd64')].href") | first }}
+  - name: Set HCP CLI download URL
+    when: r_hcp_cli_download.resources | length > 0
+    ansible.builtin.set_fact:
+      _ocp_workload_rhacm_hcp_cli_url: >-
+        {{ r_hcp_cli_download.resources[0] | to_json | from_json
+        | json_query("spec.links[?contains(href,'/linux/amd64')].href") | first }}
 
-- name: Download HCP CLI
-  ansible.builtin.get_url:
-    url: "{{ _ocp_workload_rhacm_hcp_cli_url }}"
-    validate_certs: false
-    dest: /tmp/hcp.tar.gz
-    mode: "0660"
-  register: r_hcp_cli
-  until: r_hcp_cli is success
-  retries: 10
-  delay: 10
+  - name: Download HCP CLI
+    ansible.builtin.get_url:
+      url: "{{ _ocp_workload_rhacm_hcp_cli_url }}"
+      validate_certs: false
+      dest: /tmp/hcp.tar.gz
+      mode: ug=rw,o=r
+    register: r_hcp_cli
+    until: r_hcp_cli is success
+    retries: 10
+    delay: 10
 
-- name: Install HCP CLI on bastion
-  become: true
-  ansible.builtin.unarchive:
-    src: /tmp/hcp.tar.gz
-    remote_src: true
-    dest: /usr/bin
-    mode: "0775"
-    owner: root
-    group: root
-  args:
-    creates: /usr/bin/hcp
+  - name: Install HCP CLI on bastion
+    become: true
+    ansible.builtin.unarchive:
+      src: /tmp/hcp.tar.gz
+      remote_src: true
+      dest: /usr/bin
+      mode: ug=rwx,o=rx
+      owner: root
+      group: root
+    args:
+      creates: /usr/bin/hcp
 
-- name: Remove downloaded file
-  ansible.builtin.file:
-    state: absent
-    path: /tmp/hcp.tar.gz
+  - name: Remove downloaded file
+    ansible.builtin.file:
+      state: absent
+      path: /tmp/hcp.tar.gz
 
-- name: Setup HCP CLI bash completion
-  become: true
-  ansible.builtin.shell: "/usr/bin/hcp completion bash >/etc/bash_completion.d/hcp"
-  args:
-    creates: /etc/bash_completion.d/hcp
+  - name: Setup HCP CLI bash completion
+    become: true
+    ansible.builtin.shell: "/usr/bin/hcp completion bash >/etc/bash_completion.d/hcp"
+    args:
+      creates: /etc/bash_completion.d/hcp
 
 #############################################################################
 # Set up RHDP Configuration
 # Automatically configure newly deployed HCP clusters
 #############################################################################
-
 - name: Set up RHDP Configuration
   when: ocp_workload_rhacm_hcp_rhdp_policies_setup | bool
   kubernetes.core.k8s:
     state: present
-    definition: "{{ lookup('template', item) }}"
+    template: "{{ item }}"
   loop:
   - rhdp/clusterrolebinding.yaml.j2
   - rhdp/namespace-channels.yaml.j2
@@ -206,7 +206,7 @@
   when: ocp_workload_rhacm_hcp_managed_cluster_set_setup | bool
   kubernetes.core.k8s:
     state: present
-    definition: "{{ lookup('template', item) }}"
+    template: "{{ item }}"
   loop:
   - managedclusterset/namespace-submariner-broker.yaml.j2
   - managedclusterset/managedclusterset.yaml.j2
@@ -216,7 +216,6 @@
 # Wait for ConfigMap kube-public/oidc-storage-provider-s3-config to be
 # available before proceeding
 #############################################################################
-
 - name: Wait for ConfigMap kube-public/oidc-storage-provider-s3-config
   kubernetes.core.k8s_info:
     api_version: v1
@@ -233,7 +232,6 @@
 #############################################################################
 # Deploy managed HyperShift clusters
 #############################################################################
-
 - name: Deploy Hypershift clusters
   when: ocp_workload_rhacm_hcp_deploy_clusters | length > 0
   ansible.builtin.include_tasks: create_hypershift_cluster.yml
@@ -260,7 +258,6 @@
 #############################################################################
 # AgnosticD User Data
 #############################################################################
-
 - name: Save access information for all deployed clusters
   when: ocp_workload_rhacm_hcp_deploy_clusters | length > 0
   ansible.builtin.include_tasks:
@@ -278,9 +275,3 @@
       hypershift_s3_region: "{{ ocp_workload_rhacm_hcp_s3_bucket_region }}"
       hypershift_s3_access_key_id: "{{ aws_access_key_id }}"
       hypershift_s3_secret_access_key: "{{ aws_secret_access_key }}"
-
-# Leave this as the last task in the playbook.
-- name: Workload tasks complete
-  when: not silent|bool
-  ansible.builtin.debug:
-    msg: "Workload Tasks completed successfully."
