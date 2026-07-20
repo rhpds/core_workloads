@@ -111,17 +111,16 @@
 #############################################################################
 - name: Wait until HCP CLI download deployment is ready
   kubernetes.core.k8s_info:
-    api_version: v1
+    api_version: apps/v1
     kind: Deployment
     namespace: multicluster-engine
     name: hcp-cli-download
-  register: r_hcp_cli_deployment
-  retries: 60
-  delay: 30
-  until:
-  - r_hcp_cli_deployment.resources | length | int > 0
-  - r_hcp_cli_deployment.resources[0].status.readyReplicas is defined
-  - r_hcp_cli_deployment.resources[0].status.readyReplicas | int == r_hcp_cli_deployment.resources[0].spec.replicas | int
+    wait: true
+    wait_condition:
+      type: Available
+      status: "True"
+    wait_sleep: 30
+    wait_timeout: 1800
 
 - name: Run on Bastion
   delegate_to: "{{ (groups['bastions'] | default(['localhost']))[0] }}"
