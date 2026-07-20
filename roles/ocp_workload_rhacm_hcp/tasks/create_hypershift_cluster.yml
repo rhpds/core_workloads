@@ -13,10 +13,8 @@
   delay: 30
   until: r_crd.resources | length | int > 0
 
-- name: Include AWS Role Prep for OCP >= 4.17
-  when:
-    - ocp4_installer_version is version('4.17', '>=')
-  include_tasks: prep_aws_roles.yaml
+- name: Include AWS Role Prep
+  ansible.builtin.include_tasks: prep_aws_roles.yaml
 
 - name: Ensure hosted cluster doesn't already exist
   kubernetes.core.k8s_info:
