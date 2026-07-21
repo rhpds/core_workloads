@@ -122,26 +122,26 @@
     wait_sleep: 30
     wait_timeout: 1800
 
+- name: Get HCP CLI download URL
+  kubernetes.core.k8s_info:
+    api_version: console.openshift.io/v1
+    kind: ConsoleCLIDownload
+    name: hcp-cli-download
+  register: r_hcp_cli_download
+  retries: 20
+  delay: 10
+  until: r_hcp_cli_download.resources | length > 0
+
+- name: Set HCP CLI download URL
+  when: r_hcp_cli_download.resources | length > 0
+  ansible.builtin.set_fact:
+    _ocp_workload_rhacm_hcp_cli_url: >-
+      {{ r_hcp_cli_download.resources[0] | to_json | from_json
+      | json_query("spec.links[?contains(href,'/linux/amd64')].href") | first }}
+
 - name: Run on Bastion
   delegate_to: "{{ (groups['bastions'] | default(['localhost']))[0] }}"
   block:
-  - name: Get HCP CLI download URL
-    kubernetes.core.k8s_info:
-      api_version: console.openshift.io/v1
-      kind: ConsoleCLIDownload
-      name: hcp-cli-download
-    register: r_hcp_cli_download
-    retries: 20
-    delay: 10
-    until: r_hcp_cli_download.resources | length > 0
-
-  - name: Set HCP CLI download URL
-    when: r_hcp_cli_download.resources | length > 0
-    ansible.builtin.set_fact:
-      _ocp_workload_rhacm_hcp_cli_url: >-
-        {{ r_hcp_cli_download.resources[0] | to_json | from_json
-        | json_query("spec.links[?contains(href,'/linux/amd64')].href") | first }}
-
   - name: Download HCP CLI
     ansible.builtin.get_url:
       url: "{{ _ocp_workload_rhacm_hcp_cli_url }}"
