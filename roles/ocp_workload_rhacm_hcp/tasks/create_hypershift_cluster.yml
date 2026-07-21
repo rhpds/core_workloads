@@ -27,48 +27,49 @@
 - name: Deploy hosted cluster {{ _ocp_workload_rhacm_hcp_cluster_name }}
   when: r_hosted_cluster.resources | length == 0
   block:
-    - name: Run hcp CLI to deploy hosted cluster
-      environment:
-        AWS_ACCESS_KEY_ID: "{{ aws_access_key_id }}"
-        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
-        AWS_REGION: "{{ ocp_workload_rhacm_hcp_s3_bucket_region }}"
-      ansible.builtin.command: >-
-        /usr/bin/hcp create cluster aws
-          --auto-repair
-          --control-plane-availability-policy {{ _ocp_workload_rhacm_hcp_cluster_control_plane_availability }}
-          --etcd-storage-class {{ _ocp_workload_rhacm_hcp_cluster_etc_storage_class }}
-          --infra-availability-policy {{ _ocp_workload_rhacm_hcp_cluster_infra_availability }}
-          --infra-id {{ _ocp_workload_rhacm_hcp_cluster_infra_id }}
-          --instance-type {{ _ocp_workload_rhacm_hcp_cluster_worker_instance_type }}
-          --name {{ _ocp_workload_rhacm_hcp_cluster_name }}
-          --namespace local-cluster
-          --network-type {{ _ocp_workload_rhacm_hcp_cluster_network_type }}
-          --node-pool-replicas {{ _ocp_workload_rhacm_hcp_cluster_nodepool_replicas }}
-          --region {{ _ocp_workload_rhacm_hcp_cluster_region }}
-          --release-image quay.io/openshift-release-dev/ocp-release:{{ _ocp_workload_rhacm_hcp_cluster_ocp_release }}-multi
-          --root-volume-size {{ _ocp_workload_rhacm_hcp_cluster_root_volume_size }}
-          --root-volume-type {{ _ocp_workload_rhacm_hcp_cluster_root_volume_type }}
-          --zones {{ _ocp_workload_rhacm_hcp_cluster_zones | join(',') }}
-          --role-arn "{{ r_role_arn.stdout }}"
-          --sts-creds /tmp/sts-creds.json
-          --pull-secret /tmp/pull_secret.json
-          --base-domain "{{ subdomain_base_suffix | regex_replace('^\.', '') }}"
-          --endpoint-access=Public
-          --generate-ssh
-      register: r_hcp_create_cluster
-      retries: 5
-      delay: 30
-      until: r_hcp_create_cluster.rc == 0
-      ignore_errors: true
+  - name: Run hcp CLI to deploy hosted cluster
+    delegate_to: "{{ (groups['bastions'] | default(['localhost']))[0] }}"
+    environment:
+      AWS_ACCESS_KEY_ID: "{{ aws_access_key_id }}"
+      AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
+      AWS_REGION: "{{ ocp_workload_rhacm_hcp_s3_bucket_region }}"
+    ansible.builtin.command: >-
+      /usr/bin/hcp create cluster aws
+        --auto-repair
+        --control-plane-availability-policy {{ _ocp_workload_rhacm_hcp_cluster_control_plane_availability }}
+        --etcd-storage-class {{ _ocp_workload_rhacm_hcp_cluster_etc_storage_class }}
+        --infra-availability-policy {{ _ocp_workload_rhacm_hcp_cluster_infra_availability }}
+        --infra-id {{ _ocp_workload_rhacm_hcp_cluster_infra_id }}
+        --instance-type {{ _ocp_workload_rhacm_hcp_cluster_worker_instance_type }}
+        --name {{ _ocp_workload_rhacm_hcp_cluster_name }}
+        --namespace local-cluster
+        --network-type {{ _ocp_workload_rhacm_hcp_cluster_network_type }}
+        --node-pool-replicas {{ _ocp_workload_rhacm_hcp_cluster_nodepool_replicas }}
+        --region {{ _ocp_workload_rhacm_hcp_cluster_region }}
+        --release-image quay.io/openshift-release-dev/ocp-release:{{ _ocp_workload_rhacm_hcp_cluster_ocp_release }}-multi
+        --root-volume-size {{ _ocp_workload_rhacm_hcp_cluster_root_volume_size }}
+        --root-volume-type {{ _ocp_workload_rhacm_hcp_cluster_root_volume_type }}
+        --zones {{ _ocp_workload_rhacm_hcp_cluster_zones | join(',') }}
+        --role-arn "{{ r_role_arn.stdout }}"
+        --sts-creds /tmp/sts-creds.json
+        --pull-secret /tmp/pull_secret.json
+        --base-domain "{{ subdomain_base_suffix | regex_replace('^\.', '') }}"
+        --endpoint-access=Public
+        --generate-ssh
+    register: r_hcp_create_cluster
+    retries: 5
+    delay: 30
+    until: r_hcp_create_cluster.rc == 0
+    ignore_errors: true
 
-    - name: Print hcp command output
-      ansible.builtin.debug:
-        msg: "{{ r_hcp_create_cluster.stdout }}"
+  - name: Print hcp command output
+    ansible.builtin.debug:
+      msg: "{{ r_hcp_create_cluster.stdout }}"
 
-    - name: Abort
-      when: r_hcp_create_cluster.rc > 0
-      ansible.builtin.fail:
-        msg: "Cluster creation failed. Aborting."
+  - name: Abort
+    when: r_hcp_create_cluster.rc > 0
+    ansible.builtin.fail:
+      msg: "Cluster creation failed. Aborting."
 
 - name: Create managed cluster to add cluster to ACM
   kubernetes.core.k8s:
