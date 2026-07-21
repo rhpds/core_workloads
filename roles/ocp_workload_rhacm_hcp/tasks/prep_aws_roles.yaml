@@ -81,3 +81,15 @@
     cmd: >-
       aws sts get-session-token --output json > sts-creds.json
   register: r_sts
+
+- name: Read STS credentials file
+  ansible.builtin.slurp:
+    src: /tmp/sts-creds.json
+  register: r_sts_creds
+
+- name: Copy STS credentials to bastion
+  delegate_to: "{{ (groups['bastions'] | default(['localhost']))[0] }}"
+  ansible.builtin.copy:
+    content: "{{ r_sts_creds.content | b64decode }}"
+    dest: /tmp/sts-creds.json
+    mode: ug=rw,o=r
