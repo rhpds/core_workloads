@@ -76,7 +76,3 @@
     state: present
     template: managed-cluster.yaml.j2
 
-- name: Create klusterlet-addon-config to allow policy deployment
-  kubernetes.core.k8s:
-    state: present
-    template: klusterlet-addon-config.yaml.j2

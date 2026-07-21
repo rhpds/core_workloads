@@ -190,16 +190,10 @@
     state: present
     template: "{{ item }}"
   loop:
-  - policies/clusterrolebinding.yaml.j2
-  - policies/namespace-channels.yaml.j2
-  - policies/namespace-applications.yaml.j2
   - policies/namespace-policies.yaml.j2
-  - policies/secret.yaml.j2
-  - policies/channel.yaml.j2
-  - policies/placement.yaml.j2
-  - policies/subscription.yaml.j2
-  - policies/application.yaml.j2
   - policies/managedclustersetbinding.yaml.j2
+  - policies/secret.yaml.j2
+  - policies/application.yaml.j2
 
 #############################################################################
 # Set up ManagedClusterSet Policies

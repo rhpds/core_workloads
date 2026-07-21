@@ -1,14 +1,21 @@
 ---
-apiVersion: app.k8s.io/v1beta1
+apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: hcp-configuration
-  namespace: {{ ocp_workload_rhacm_hcp_policies_namespace }}
+  name: hcp-policies
+  namespace: openshift-gitops
 spec:
-  componentKinds:
-  - group: apps.open-cluster-management.io
-    kind: Subscription
-  descriptor: {}
-  selector:
-    matchLabels:
-      app: hcp-configuration
+  project: default
+  source:
+    repoURL: {{ ocp_workload_rhacm_hcp_policies_repository }}
+    targetRevision: {{ ocp_workload_rhacm_hcp_policies_repository_branch }}
+    path: policies
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: {{ ocp_workload_rhacm_hcp_policies_namespace }}
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=false

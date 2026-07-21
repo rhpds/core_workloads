@@ -1,39 +1,95 @@
 ---
-- name: Remove role-policy hcp-cli-role, trust-relationship.json
-  environment:
-    AWS_ACCESS_KEY_ID: "{{ aws_access_key_id }}"
-    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
-    AWS_REGION: "{{ ocp_workload_rhacm_hcp_s3_bucket_region }}"
-  ansible.builtin.command:
-    chdir: /tmp
-    cmd: >-
-      aws iam delete-role-policy
-       --role-name hcp-cli-role
-       --policy-name trust-relationship.json
+#############################################################################
+# Remove RHACM Policies (ArgoCD Application + supporting resources)
+#############################################################################
+- name: Remove ArgoCD Application for policies
+  when: ocp_workload_rhacm_hcp_policies_setup | bool
+  kubernetes.core.k8s:
+    api_version: argoproj.io/v1alpha1
+    kind: Application
+    name: hcp-policies
+    namespace: openshift-gitops
+    state: absent
   ignore_errors: true
 
-- name: Remove role hcp-cli-role
-  environment:
-    AWS_ACCESS_KEY_ID: "{{ aws_access_key_id }}"
-    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
-    AWS_REGION: "{{ ocp_workload_rhacm_hcp_s3_bucket_region }}"
-  ansible.builtin.command:
-    chdir: /tmp
-    cmd: >-
-      aws iam delete-role
-       --role-name hcp-cli-role
+- name: Remove ManagedClusterSetBinding
+  when: ocp_workload_rhacm_hcp_policies_setup | bool
+  kubernetes.core.k8s:
+    api_version: cluster.open-cluster-management.io/v1beta2
+    kind: ManagedClusterSetBinding
+    name: hcp
+    namespace: "{{ ocp_workload_rhacm_hcp_policies_namespace }}"
+    state: absent
   ignore_errors: true
 
-- name: Apply awspolicy-hcp-cli-role.json
+- name: Remove policies namespace
+  when: ocp_workload_rhacm_hcp_policies_setup | bool
+  kubernetes.core.k8s:
+    api_version: v1
+    kind: Namespace
+    name: "{{ ocp_workload_rhacm_hcp_policies_namespace }}"
+    state: absent
+  ignore_errors: true
+
+#############################################################################
+# Remove ManagedClusterSet
+#############################################################################
+- name: Remove ManagedClusterSet resources
+  when: ocp_workload_rhacm_hcp_managed_cluster_set_setup | bool
+  kubernetes.core.k8s:
+    api_version: "{{ item.api_version }}"
+    kind: "{{ item.kind }}"
+    name: "{{ item.name }}"
+    namespace: "{{ item.namespace | default(omit) }}"
+    state: absent
+  loop:
+  - api_version: cluster.open-cluster-management.io/v1beta2
+    kind: ManagedClusterSetBinding
+    name: "{{ ocp_workload_rhacm_hcp_managed_cluster_set_name }}"
+    namespace: "{{ ocp_workload_rhacm_hcp_managed_cluster_set_name }}-broker"
+  - api_version: cluster.open-cluster-management.io/v1beta2
+    kind: ManagedClusterSet
+    name: "{{ ocp_workload_rhacm_hcp_managed_cluster_set_name }}"
+  - api_version: v1
+    kind: Namespace
+    name: "{{ ocp_workload_rhacm_hcp_managed_cluster_set_name }}-broker"
+  loop_control:
+    label: "{{ item.kind }}/{{ item.name }}"
+  ignore_errors: true
+
+#############################################################################
+# Remove AWS IAM resources
+#############################################################################
+- name: Delete IAM inline policy from hcp-cli-role
   environment:
     AWS_ACCESS_KEY_ID: "{{ aws_access_key_id }}"
     AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
     AWS_REGION: "{{ ocp_workload_rhacm_hcp_s3_bucket_region }}"
-  ansible.builtin.command:
-    chdir: /tmp
-    cmd: >-
-      aws iam delete-role-policy
-       --role-name hcp-cli-role
-       --policy-name trust-relationship.json
-       --policy-document file://awspolicy-hcp-cli-role.json
+  ansible.builtin.command: >-
+    aws iam delete-role-policy
+      --role-name hcp-cli-role
+      --policy-name trust-relationship.json
+  ignore_errors: true
+
+- name: Delete IAM role hcp-cli-role
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ aws_access_key_id }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
+    AWS_REGION: "{{ ocp_workload_rhacm_hcp_s3_bucket_region }}"
+  ansible.builtin.command: >-
+    aws iam delete-role
+      --role-name hcp-cli-role
+  ignore_errors: true
+
+#############################################################################
+# Remove S3 bucket
+#############################################################################
+- name: Delete S3 bucket
+  amazon.aws.s3_bucket:
+    name: "{{ ocp_workload_rhacm_hcp_s3_bucket_name }}"
+    region: "{{ ocp_workload_rhacm_hcp_s3_bucket_region }}"
+    state: absent
+    force: true
+    aws_access_key: "{{ aws_access_key_id }}"
+    aws_secret_key: "{{ aws_secret_access_key }}"
   ignore_errors: true
