@@ -1,3 +1,4 @@
+---
 - name: Get ARN for hosted cluster user
   environment:
     AWS_ACCESS_KEY_ID: "{{ aws_access_key_id }}"
@@ -80,8 +81,3 @@
     cmd: >-
       aws sts get-session-token --output json > sts-creds.json
   register: r_sts
-
-- name: Write pull secret to a file
-  ansible.builtin.copy:
-    content: "{{ ocp4_pull_secret }}"
-    dest: /tmp/pull_secret.json

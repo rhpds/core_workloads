@@ -33,7 +33,6 @@
 #############################################################################
 - name: Create AWS S3 bucket
   amazon.aws.s3_bucket:
-  # s3_bucket:
     name: "{{ ocp_workload_rhacm_hcp_s3_bucket_name }}"
     region: "{{ ocp_workload_rhacm_hcp_s3_bucket_region }}"
     state: present
@@ -139,7 +138,7 @@
       {{ r_hcp_cli_download.resources[0] | to_json | from_json
       | json_query("spec.links[?contains(href,'/linux/amd64')].href") | first }}
 
-- name: Run on Bastion
+- name: Install HCP CLI on Bastion
   delegate_to: "{{ (groups['bastions'] | default(['localhost']))[0] }}"
   block:
   - name: Download HCP CLI
@@ -176,6 +175,11 @@
     args:
       creates: /etc/bash_completion.d/hcp
 
+  - name: Write pull secret to a file
+    ansible.builtin.copy:
+      content: "{{ ocp4_pull_secret }}"
+      dest: /tmp/pull_secret.json
+
 #############################################################################
 # Set up RHDP Configuration
 # Automatically configure newly deployed HCP clusters
@@ -200,7 +204,6 @@
 #############################################################################
 # Set up ManagedClusterSet Policies
 #############################################################################
-
 - name: Set up ManagedClusterSet
   when: ocp_workload_rhacm_hcp_managed_cluster_set_setup | bool
   kubernetes.core.k8s:
