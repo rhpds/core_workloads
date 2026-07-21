@@ -69,6 +69,7 @@ ocp_workload_rhacm_hcp_policies_namespace: hcp-policies
 
 ocp_workload_rhacm_hcp_policies_repository: https://github.com/rhpds/hypershift-policies.git
 ocp_workload_rhacm_hcp_policies_repository_branch: main
+ocp_workload_rhacm_hcp_policies_repository_path: /
 ocp_workload_rhacm_hcp_policies_aws_secret_access_key: "{{ hostvars.localhost.route53user_secret_access_key }}"
 
 #############################################################################
