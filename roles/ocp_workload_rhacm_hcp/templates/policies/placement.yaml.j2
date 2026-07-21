@@ -2,10 +2,10 @@
 apiVersion: cluster.open-cluster-management.io/v1beta1
 kind: Placement
 metadata:
-  name: rhdp-hcp-configuration
-  namespace: {{ ocp_workload_rhacm_hcp_rhdp_policies_namespace }}
+  name: hcp-configuration
+  namespace: {{ ocp_workload_rhacm_hcp_policies_namespace }}
   labels:
-    app: rhdp-hcp-configuration
+    app: hcp-configuration
 spec:
   predicates:
   - requiredClusterSelector:

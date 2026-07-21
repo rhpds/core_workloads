@@ -60,20 +60,20 @@ ocp_workload_rhacm_hcp_deploy_clusters: []
 #     rhdp_usage: production
 
 #############################################################################
-# Set up RHDP Policies
+# Set up Policies
 #############################################################################
-# This next section is only to deploy a shared cluster for RHDP to deploy hosted clusters to
-# using the workload ocp_workload_deploy_hosted_cluster
+# Set up policies for all created clusters.
 #############################################################################
-ocp_workload_rhacm_hcp_rhdp_policies_setup: false
-ocp_workload_rhacm_hcp_rhdp_policies_namespace: rhdp-policies
-ocp_workload_rhacm_hcp_rhdp_applications_namespace: rhdp-applications
-ocp_workload_rhacm_hcp_rhdp_channels_namespace: rhdp-channels
-ocp_workload_rhacm_hcp_rhdp_policies_repository: https://github.com/rhpds/hypershift-policies.git
-ocp_workload_rhacm_hcp_rhdp_policies_repository_branch: main
-ocp_workload_rhacm_hcp_rhdp_policies_repository_path: "/"
-ocp_workload_rhacm_hcp_rhdp_policies_admin_user: admin
-ocp_workload_rhacm_hcp_rhdp_policies_aws_secret_access_key: "{{ hostvars.localhost.route53user_secret_access_key }}"
+ocp_workload_rhacm_hcp_policies_setup: false
+ocp_workload_rhacm_hcp_policies_namespace: hcp-policies
+ocp_workload_rhacm_hcp_applications_namespace: hcp-applications
+ocp_workload_rhacm_hcp_channels_namespace: hcp-channels
+
+ocp_workload_rhacm_hcp_policies_repository: https://github.com/rhpds/hypershift-policies.git
+ocp_workload_rhacm_hcp_policies_repository_branch: main
+ocp_workload_rhacm_hcp_policies_repository_path: "/"
+ocp_workload_rhacm_hcp_policies_admin_user: admin
+ocp_workload_rhacm_hcp_policies_aws_secret_access_key: "{{ hostvars.localhost.route53user_secret_access_key }}"
 
 #############################################################################
 # Set up ManagedClusterSet for clusters with hosted control planes

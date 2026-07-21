@@ -181,25 +181,25 @@
       dest: /tmp/pull_secret.json
 
 #############################################################################
-# Set up RHDP Configuration
+# Set up Policies
 # Automatically configure newly deployed HCP clusters
 #############################################################################
-- name: Set up RHDP Configuration
-  when: ocp_workload_rhacm_hcp_rhdp_policies_setup | bool
+- name: Set up Policies
+  when: ocp_workload_rhacm_hcp_policies_setup | bool
   kubernetes.core.k8s:
     state: present
     template: "{{ item }}"
   loop:
-  - rhdp/clusterrolebinding.yaml.j2
-  - rhdp/namespace-channels.yaml.j2
-  - rhdp/namespace-applications.yaml.j2
-  - rhdp/namespace-policies.yaml.j2
-  - rhdp/secret.yaml.j2
-  - rhdp/channel.yaml.j2
-  - rhdp/placement.yaml.j2
-  - rhdp/subscription.yaml.j2
-  - rhdp/application.yaml.j2
-  - rhdp/managedclustersetbinding.yaml.j2
+  - policies/clusterrolebinding.yaml.j2
+  - policies/namespace-channels.yaml.j2
+  - policies/namespace-applications.yaml.j2
+  - policies/namespace-policies.yaml.j2
+  - policies/secret.yaml.j2
+  - policies/channel.yaml.j2
+  - policies/placement.yaml.j2
+  - policies/subscription.yaml.j2
+  - policies/application.yaml.j2
+  - policies/managedclustersetbinding.yaml.j2
 
 #############################################################################
 # Set up ManagedClusterSet Policies

@@ -2,10 +2,10 @@
 apiVersion: apps.open-cluster-management.io/v1
 kind: Channel
 metadata:
-  name: rhdp-hcp-configuration
-  namespace: {{ ocp_workload_rhacm_hcp_rhdp_policies_namespace }}
+  name: hcp-configuration
+  namespace: {{ ocp_workload_rhacm_hcp_policies_namespace }}
   annotations:
     apps.open-cluster-management.io/reconcile-rate: medium
 spec:
-  pathname: {{ ocp_workload_rhacm_hcp_rhdp_policies_repository }}
+  pathname: {{ ocp_workload_rhacm_hcp_policies_repository }}
   type: Git
