@@ -1,0 +1,50 @@
+---
+- name: Destroy open environment CloudFormation stack
+  amazon.aws.cloudformation:
+    aws_access_key: "{{ aws_access_key_id }}"
+    aws_secret_key: "{{ aws_secret_access_key }}"
+    stack_name: "{{ project_tag }}-open-environment"
+    state: absent
+    region: "{{ aws_region_loop | default(aws_region) | default(region) | default('us-east-1') }}"
+  register: r_cfn_destroy
+  ignore_errors: true
+
+- name: Warn if CloudFormation stack deletion failed
+  when: r_cfn_destroy is failed
+  ansible.builtin.debug:
+    msg: >-
+      WARNING: CloudFormation stack {{ project_tag }}-open-environment deletion failed.
+      AWS Nuke will clean up remaining resources when the sandbox is released.
+      Error: {{ r_cfn_destroy.msg | default('unknown') }}
+
+- name: Clean up Route53 hosted zone
+  when: aws_open_environment_cleanup_route53 | default(true) | bool
+  block:
+  - name: Set public zone name
+    ansible.builtin.set_fact:
+      _aws_public_zone: "{{ guid }}.{{ subdomain_base_suffix | default(base_domain) | regex_replace('^\\.', '') }}."
+
+  - name: List hosted zones matching this environment
+    ansible.builtin.command: >-
+      aws route53 list-hosted-zones-by-name
+      --dns-name {{ _aws_public_zone }}
+      --max-items 4
+    environment:
+      AWS_ACCESS_KEY_ID: "{{ aws_access_key_id }}"
+      AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
+      AWS_DEFAULT_REGION: "{{ aws_region | default('us-east-1') }}"
+    register: r_route53_zones
+    changed_when: false
+    ignore_errors: true
+
+  - name: Delete matching hosted zones
+    when:
+    - r_route53_zones is success
+    - _zone.Name == _aws_public_zone
+    ansible.builtin.include_tasks: delete_route53_zone.yml
+    vars:
+      _hosted_zone_id: "{{ _zone.Id | regex_replace('/hostedzone/', '') }}"
+    loop: "{{ (r_route53_zones.stdout | from_json).HostedZones | default([]) }}"
+    loop_control:
+      loop_var: _zone
+      label: "{{ _zone.Name | default('unknown') }}"
