@@ -79,7 +79,6 @@ ocp_workload_rhacm_hcp_policies_aws_secret_access_key: "{{ hostvars.localhost.ro
 # ManagedClusterSet.
 # All clusters need to have the label:
 #   "cluster.open-cluster-management.io/clusterset:<ManagedClusterSet Name>""
-# Workload ocp_workload_deploy_hosted_cluster to set that label.
 #############################################################################
 ocp_workload_rhacm_hcp_managed_cluster_set_setup: false
 ocp_workload_rhacm_hcp_managed_cluster_set_name: hcp
