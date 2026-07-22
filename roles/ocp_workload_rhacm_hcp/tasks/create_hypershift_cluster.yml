@@ -55,6 +55,7 @@
         --pull-secret /tmp/pull_secret.json
         --base-domain "{{ subdomain_base_suffix | regex_replace('^\.', '') }}"
         --endpoint-access=Public
+    changed_when: true
         --generate-ssh
     register: r_hcp_create_cluster
     retries: 5

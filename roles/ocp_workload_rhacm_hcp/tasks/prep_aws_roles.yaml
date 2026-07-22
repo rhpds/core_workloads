@@ -8,6 +8,7 @@
     cmd: >-
       aws sts get-caller-identity --query "Arn"
   register: r_arn
+  changed_when: false
 
 - name: Debug r_arn
   ansible.builtin.debug:
@@ -31,6 +32,7 @@
         --role-name hcp-cli-role
         --assume-role-policy-document file://trust-relationship.json
         --query "Role.Arn"
+  changed_when: true
   ignore_errors: true
 
 - name: Get trust-relationship.json Arn
@@ -45,6 +47,7 @@
         --role-name hcp-cli-role
         --query "Role.Arn"
   register: r_role_arn
+  changed_when: false
   ignore_errors: true
 
 - name: Debug r_role_arn
@@ -69,6 +72,7 @@
        --role-name hcp-cli-role
        --policy-name trust-relationship.json
        --policy-document file://awspolicy-hcp-cli-role.json
+  changed_when: true
   ignore_errors: true
 
 - name: Get STS credentials
@@ -81,6 +85,7 @@
     cmd: >-
       aws sts get-session-token --output json > sts-creds.json
   register: r_sts
+  changed_when: true
 
 - name: Read STS credentials file
   ansible.builtin.slurp:

@@ -69,6 +69,7 @@
     aws iam delete-role-policy
       --role-name hcp-cli-role
       --policy-name trust-relationship.json
+  changed_when: true
   ignore_errors: true
 
 - name: Delete IAM role hcp-cli-role
@@ -79,6 +80,7 @@
   ansible.builtin.command: >-
     aws iam delete-role
       --role-name hcp-cli-role
+  changed_when: true
   ignore_errors: true
 
 #############################################################################

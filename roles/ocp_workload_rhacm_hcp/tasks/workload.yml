@@ -53,6 +53,7 @@
     cmd: >-
       aws s3api delete-public-access-block
         --bucket {{ ocp_workload_rhacm_hcp_s3_bucket_name }}
+  changed_when: true
 
 - name: Copy policy file
   ansible.builtin.template:
@@ -71,6 +72,7 @@
       aws s3api put-bucket-policy
         --bucket {{ ocp_workload_rhacm_hcp_s3_bucket_name }}
         --policy file://bucket-policy.json
+  changed_when: true
 
 - name: Remove temporary policy file
   ansible.builtin.file:
