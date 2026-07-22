@@ -1,0 +1,8 @@
+---
+apiVersion: cluster.open-cluster-management.io/v1beta2
+kind: ManagedClusterSetBinding
+metadata:
+  name: {{ ocp_workload_rhacm_hcp_managed_cluster_set_name }}
+  namespace: {{ ocp_workload_rhacm_hcp_policies_namespace }}
+spec:
+  clusterSet: {{ ocp_workload_rhacm_hcp_managed_cluster_set_name }}

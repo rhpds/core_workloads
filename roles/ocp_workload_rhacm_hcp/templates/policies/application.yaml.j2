@@ -1,0 +1,21 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: hcp-policies
+  namespace: openshift-gitops
+spec:
+  project: default
+  source:
+    repoURL: {{ ocp_workload_rhacm_hcp_policies_repository }}
+    targetRevision: {{ ocp_workload_rhacm_hcp_policies_repository_branch }}
+    path: {{ ocp_workload_rhacm_hcp_policies_repository_path }}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: {{ ocp_workload_rhacm_hcp_policies_namespace }}
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=false
