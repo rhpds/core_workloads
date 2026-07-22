@@ -75,4 +75,3 @@
   kubernetes.core.k8s:
     state: present
     template: managed-cluster.yaml.j2
-

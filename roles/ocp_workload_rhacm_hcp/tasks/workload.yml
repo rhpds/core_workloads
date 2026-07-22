@@ -179,6 +179,7 @@
     ansible.builtin.copy:
       content: "{{ ocp4_pull_secret }}"
       dest: /tmp/pull_secret.json
+      mode: ug=rw,o=r
 
 #############################################################################
 # Set up Policies
