@@ -76,7 +76,7 @@
 #############################################################################
 # Write pull secret to file
 #############################################################################
-- name: Write pull secret to a file
+- name: Write pull secret to file
   delegate_to: "{{ (groups['bastions'] | default(['localhost']))[0] }}"
   ansible.builtin.copy:
     content: "{{ ocp4_pull_secret }}"
