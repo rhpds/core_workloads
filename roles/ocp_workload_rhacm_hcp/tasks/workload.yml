@@ -31,6 +31,17 @@
 #############################################################################
 # AWS S3 bucket setup
 #############################################################################
+- name: Ensure AWS S3 bucket is absent
+  amazon.aws.s3_bucket:
+    name: "{{ ocp_workload_rhacm_hcp_s3_bucket_name }}"
+    state: absent
+    aws_access_key: "{{ aws_access_key_id }}"
+    aws_secret_key: "{{ aws_secret_access_key }}"
+  register: r_s3_bucket_absent
+  until: r_s3_bucket_absent.changed == false
+  retries: 10
+  delay: 10
+
 - name: Create AWS S3 bucket
   amazon.aws.s3_bucket:
     name: "{{ ocp_workload_rhacm_hcp_s3_bucket_name }}"
@@ -38,11 +49,11 @@
     state: present
     aws_access_key: "{{ aws_access_key_id }}"
     aws_secret_key: "{{ aws_secret_access_key }}"
-    public_access:
-      block_public_acls: false
-      block_public_policy: false
-      ignore_public_acls: true
-      restrict_public_buckets: false
+    # public_access:
+    #   block_public_acls: false
+    #   block_public_policy: false
+    #   ignore_public_acls: true
+    #   restrict_public_buckets: false
 
 - name: Update s3 bucket
   environment:
