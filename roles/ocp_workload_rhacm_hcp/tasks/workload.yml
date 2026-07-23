@@ -74,7 +74,7 @@
     template: secret-aws-credentials.yaml.j2
 
 #############################################################################
-# Write pull secret to a file
+# Write pull secret to file
 #############################################################################
 - name: Write pull secret to a file
   delegate_to: "{{ (groups['bastions'] | default(['localhost']))[0] }}"
@@ -87,12 +87,13 @@
 # Install HCP CLI
 #############################################################################
 - name: Check if HCP CLI is installed
+  delegate_to: "{{ (groups['bastions'] | default(['localhost']))[0] }}"
   ansible.builtin.stat:
     path: /usr/bin/hcp
   register: r_hcp_cli_installed
 
 - name: Install HCP CLI if not already installed
-  when: r_hcp_cli_installed.stat.exists == false
+  when: not r_hcp_cli_installed.stat.exists
   block:
   - name: Wait until HCP CLI download deployment is ready
     kubernetes.core.k8s_info:
