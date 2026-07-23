@@ -1,0 +1,53 @@
+---
+# OCP Agent-Based Installer role defaults
+
+# OCP version — major.minor or major.minor.patch
+host_ocp4_installer_version: "4.20"
+
+# Mirror URL for downloading openshift-install and oc
+host_ocp4_installer_root_url: https://mirror.openshift.com/pub/openshift-v4/x86_64/clients/ocp
+
+# Cluster config
+host_ocp4_cluster_name: "{{ ocp.cluster_name | default('ocp') }}"
+host_ocp4_base_domain: "{{ ocp.base_domain | default('ocp.local') }}"
+host_ocp4_api_vip: "{{ ocp.api_vip }}"
+host_ocp4_ingress_vip: "{{ ocp.ingress_vip }}"
+
+# Pull secret — JSON string
+host_ocp4_pull_secret: "{{ pull_secret | default('{}') }}"
+
+# SSH public key for core user access
+host_ocp4_ssh_key: "{{ ssh_pub_key | default('') }}"
+
+# BMC credentials for Redfish virtual media boot
+host_ocp4_bmc_user: admin
+host_ocp4_bmc_password: "{{ common_password }}"
+
+# BMC IPs to boot — list of IPs, derived from topology if not set
+host_ocp4_bmc_ips: []
+
+# Cluster network CIDRs
+host_ocp4_machine_network_cidr: "{{ networks.cluster.cidr | default('10.0.0.0/24') }}"
+host_ocp4_bmc_cidr: "{{ networks.bmc.cidr | default('192.168.50.0/24') }}"
+host_ocp4_cluster_network_cidr: 10.128.0.0/14
+host_ocp4_service_network_cidr: 172.30.0.0/16
+
+# Install dir on bastion
+host_ocp4_install_dir: "/home/{{ ansible_user }}/ocp-install"
+
+# HTTP server port for serving agent ISO
+host_ocp4_iso_http_port: 8080
+
+# Timeout for cluster install (seconds)
+host_ocp4_install_timeout: 5400
+
+# Additional trust bundle (registry CA cert) — set by disconnected_registry role
+host_ocp4_additional_trust_bundle: ""
+
+# RHCOS images to download and serve via HTTP for assisted-image-service
+host_ocp4_rhcos_images: []
+
+# NTP sources
+host_ocp4_ntp_sources:
+  - clock.redhat.com
+  - pool.ntp.org

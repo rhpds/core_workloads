@@ -1,0 +1,60 @@
+apiVersion: v1
+baseDomain: {{ host_ocp4_base_domain }}
+metadata:
+  name: {{ host_ocp4_cluster_name }}
+compute:
+  - name: worker
+    replicas: {{ _worker_count }}
+    architecture: amd64
+controlPlane:
+  name: master
+  replicas: {{ _cp_count }}
+  architecture: amd64
+networking:
+  networkType: OVNKubernetes
+  clusterNetwork:
+    - cidr: {{ host_ocp4_cluster_network_cidr }}
+      hostPrefix: 23
+  serviceNetwork:
+    - {{ host_ocp4_service_network_cidr }}
+  machineNetwork:
+    - cidr: {{ host_ocp4_machine_network_cidr }}
+{% if _cp_count | int == 1 and _worker_count | int == 0 %}
+platform:
+  none: {}
+{% else %}
+platform:
+  baremetal:
+    apiVIPs:
+      - {{ host_ocp4_api_vip }}
+    ingressVIPs:
+      - {{ host_ocp4_ingress_vip }}
+    hosts:
+{% for host in _bmc_hosts %}
+      - name: {{ host.name }}
+        role: {{ host.role }}
+        bootMACAddress: {{ host.mac }}
+{% endfor %}
+{% endif %}
+{% if host_ocp4_additional_trust_bundle | length > 0 %}
+additionalTrustBundle: |
+{{ host_ocp4_additional_trust_bundle | indent(2, first=true) }}
+{% endif %}
+{% if disconnected_registry_hostname is defined %}
+{% set _reg = disconnected_registry_hostname + ':' + (disconnected_registry_port | default(8443) | string) %}
+imageContentSources:
+- mirrors:
+  - {{ _reg }}/openshift-release-dev/ocp-v4.0-art-dev
+  - {{ _reg }}/openshift/release
+  source: quay.io/openshift-release-dev/ocp-v4.0-art-dev
+- mirrors:
+  - {{ _reg }}/openshift-release-dev
+  source: quay.io/openshift-release-dev
+- mirrors:
+  - {{ _reg }}/openshift/release-images
+  source: quay.io/openshift-release-dev/ocp-release
+{% endif %}
+pullSecret: '{{ host_ocp4_pull_secret }}'
+{% if host_ocp4_ssh_key | length > 0 %}
+sshKey: '{{ host_ocp4_ssh_key }}'
+{% endif %}

@@ -1,0 +1,34 @@
+---
+# Eject virtual media from a BMC node after install
+# Called in a loop with _bmc_ip as the loop var
+
+- name: Get Redfish system ID for eject - {{ _bmc_ip }}
+  ansible.builtin.uri:
+    url: "http://{{ _bmc_ip }}:8000/redfish/v1/Systems"
+    user: "{{ host_ocp4_bmc_user }}"
+    password: "{{ host_ocp4_bmc_password }}"
+    force_basic_auth: true
+    return_content: true
+  register: _redfish_systems_eject
+  ignore_errors: true
+
+- name: Extract system ID for eject
+  when: _redfish_systems_eject is success
+  ansible.builtin.set_fact:
+    _sys_id_eject: >-
+      {{ _redfish_systems_eject.json.Members[0]['@odata.id'].split('/')[-1] }}
+
+- name: Eject virtual media - {{ _bmc_ip }}
+  when: _redfish_systems_eject is success
+  ansible.builtin.uri:
+    url: >-
+      http://{{ _bmc_ip }}:8000/redfish/v1/Systems/{{
+      _sys_id_eject }}/VirtualMedia/Cd/Actions/VirtualMedia.EjectMedia
+    method: POST
+    user: "{{ host_ocp4_bmc_user }}"
+    password: "{{ host_ocp4_bmc_password }}"
+    force_basic_auth: true
+    body_format: json
+    body: {}
+    status_code: [200, 204]
+  ignore_errors: true
