@@ -1,0 +1,15 @@
+---
+galaxy_info:
+  role_name: aws_open_environment
+  author: Red Hat, Patrick Rutledge (prutledg@redhat.com)
+  description: |
+    Creates an IAM admin user with configurable policy in an AWS sandbox
+    account and reports credentials (access key, console URL) to the user.
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms: []
+  galaxy_tags:
+  - aws
+  - sandbox
+  - openenvironment
+dependencies: []

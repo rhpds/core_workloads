@@ -1,0 +1,57 @@
+---
+- name: Get all records in zone {{ _hosted_zone_id }}
+  ansible.builtin.command: >-
+    aws route53 list-resource-record-sets --hosted-zone-id {{ _hosted_zone_id }}
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ aws_access_key_id }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
+    AWS_DEFAULT_REGION: "{{ aws_region | default('us-east-1') }}"
+  register: r_zone_records
+  changed_when: false
+
+- name: Set records to delete
+  ansible.builtin.set_fact:
+    _records_to_delete: >-
+      {{ r_zone_records.stdout | from_json
+         | json_query('ResourceRecordSets')
+         | rejectattr('Name', 'equalto', _aws_public_zone)
+         | list }}
+
+- name: Delete records and zone
+  when: _records_to_delete | length > 0
+  block:
+  - name: Create change batch file
+    ansible.builtin.copy:
+      dest: "{{ output_dir | default('/tmp/output_dir') }}/{{ guid }}_{{ _hosted_zone_id }}_delete_records.json"
+      content: |
+        {
+          "Comment": "Delete all records for {{ _hosted_zone_id }}",
+          "Changes": [
+          {% for record in _records_to_delete %}
+          {   "Action": "DELETE",
+              "ResourceRecordSet": {{ record | to_json }}
+          }{{ "," if not loop.last else "" }}
+          {% endfor %}
+          ]
+        }
+      mode: "0644"
+
+  - name: Delete all records from the zone
+    ansible.builtin.command: >-
+      aws route53 change-resource-record-sets
+      --hosted-zone-id={{ _hosted_zone_id }}
+      --change-batch=file://{{ output_dir | default('/tmp/output_dir') }}/{{ guid }}_{{ _hosted_zone_id }}_delete_records.json
+    environment:
+      AWS_ACCESS_KEY_ID: "{{ aws_access_key_id }}"
+      AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
+      AWS_DEFAULT_REGION: "{{ aws_region | default('us-east-1') }}"
+    changed_when: true
+
+  - name: Remove hosted zone
+    ansible.builtin.command: >-
+      aws route53 delete-hosted-zone --id {{ _hosted_zone_id }}
+    environment:
+      AWS_ACCESS_KEY_ID: "{{ aws_access_key_id }}"
+      AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
+      AWS_DEFAULT_REGION: "{{ aws_region | default('us-east-1') }}"
+    changed_when: true

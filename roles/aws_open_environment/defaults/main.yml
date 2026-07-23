@@ -1,0 +1,18 @@
+---
+# IAM policy for the admin user created via CloudFormation.
+# Default grants full access to all AWS services.
+sandbox_aws_admin_user_policy:
+  Statement:
+    - Effect: Allow
+      Action: "*"
+      Resource: "*"
+
+# Enable AWS web console access
+sandbox_enable_ui: true
+
+# Control reporting of sandbox credentials
+sandbox_user_info_data_enable: true
+sandbox_user_info_messages_enable: true
+
+# Clean up Route53 hosted zones on destroy
+aws_open_environment_cleanup_route53: true
