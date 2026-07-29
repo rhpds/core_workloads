@@ -16,6 +16,15 @@
 ocp4_workload_field_content_gitops_repo_url: ""
 
 # -----------------------------------------------------------------------------
+# Optional: GitHub PAT or access token for private repositories
+# -----------------------------------------------------------------------------
+# When provided, creates an ArgoCD repository secret so it can clone the repo.
+# For GitHub: use a Personal Access Token (PAT) with repo scope.
+# For GitLab: use a Project Access Token or PAT with read_repository scope.
+# Leave empty for public repositories.
+ocp4_workload_field_content_gitops_repo_key: ""
+
+# -----------------------------------------------------------------------------
 # Optional: Git revision and path
 # -----------------------------------------------------------------------------
 # Git branch, tag, or commit to deploy

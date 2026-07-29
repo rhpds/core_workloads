@@ -30,6 +30,15 @@
     _litemaas_available: false
 
 # ===================================================================
+# Register private repo credentials with ArgoCD (if key provided)
+# ===================================================================
+- name: Create ArgoCD repository secret for private repo
+  kubernetes.core.k8s:
+    state: present
+    template: repository-secret.yaml.j2
+  when: ocp4_workload_field_content_gitops_repo_key | default('') | length > 0
+
+# ===================================================================
 # Build Helm values
 # ===================================================================
 - name: Set deployer values (always included)
