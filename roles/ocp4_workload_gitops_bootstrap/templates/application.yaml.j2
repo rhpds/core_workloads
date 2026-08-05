@@ -33,9 +33,11 @@ spec:
       selfHeal: false
     syncOptions:
       - RespectIgnoreDifferences=true
+{% if ocp4_workload_gitops_bootstrap_sync_options | length > 0 %}
 {% for opt in ocp4_workload_gitops_bootstrap_sync_options %}
       - {{ opt }}
 {% endfor %}
+{% endif %}
   ignoreDifferences:
     - group: ""
       kind: ConfigMap
