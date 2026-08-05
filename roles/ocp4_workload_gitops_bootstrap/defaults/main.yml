@@ -49,3 +49,11 @@ ocp4_workload_gitops_bootstrap_application_sync_required: true # false is great 
 # /operation on child Application CRDs. Has no effect on other resource types.
 # Default: false — existing labs are unaffected unless they opt in.
 ocp4_workload_gitops_bootstrap_application_ignore_tracking: false
+
+# Additional syncOptions to include on the ArgoCD Application.
+# RespectIgnoreDifferences=true is always included.
+# Common additions:
+#   - SkipDryRunOnMissingResource=true  (when operator CRDs are in same app as Subscriptions)
+#   - CreateNamespace=true
+#   - ServerSideApply=true
+ocp4_workload_gitops_bootstrap_sync_options: []
