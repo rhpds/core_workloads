@@ -1,8 +1,4 @@
 ---
-ocp4_workload_lvms_disks:
- - /dev/vdb
-ocp4_workload_lvms_vg_name: vg1
-
 # Default values below are for LVM Operator version 4.22
 
 ocp4_workload_lvms_namespace: openshift-lvm-storage
@@ -27,6 +23,10 @@ ocp4_workload_lvms_automatic_install_plan_approval: true
 # the catalog snapshot got created.
 ocp4_workload_lvms_starting_csv: ""
 # ocp4_workload_lvms_starting_csv: "4.15.0-202505150336"
+
+ocp4_workload_lvms_disks:
+- /dev/vdb
+ocp4_workload_lvms_vg_name: vg1
 
 # --------------------------------
 # Operator Catalog Snapshot Settings
