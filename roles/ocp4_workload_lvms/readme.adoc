@@ -1,0 +1,11 @@
+= ocp4_workload_lvms - Deploy Logical Volume Manager Storage Operator to an OpenShift Cluster
+
+== Role overview
+
+* This role installs the Logical Volume Manager Storage Operator into an OpenShift Cluster.
+
+== The defaults variable file
+
+* This file ./defaults/main.yml contains all the variables you need to define to control the deployment of your workload.
+* You can modify any of these default values by adding -e "variable_name=variable_value" to the command line
+
