@@ -6,7 +6,8 @@
     install_operator_action: install
     install_operator_name: lvms-operator
     install_operator_namespace: "{{ ocp4_workload_lvms_namespace }}"
-    install_operator_manage_namespaces: []
+    install_operator_manage_namespaces:
+    - "{{ ocp4_workload_lvms_namespace }}"
     install_operator_channel: "{{ ocp4_workload_lvms_channel }}"
     install_operator_catalog: redhat-operators
     install_operator_automatic_install_plan_approval: "{{ ocp4_workload_lvms_automatic_install_plan_approval | default(true) }}"
