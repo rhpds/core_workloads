@@ -3,6 +3,8 @@
 # Keycloak Operator
 # --------------------------------
 
+ocp4_workload_authentication_keycloak_host_prefix: sso
+
 ocp4_workload_authentication_keycloak_namespace: keycloak
 
 ocp4_workload_authentication_keycloak_pgsql_user: keycloak

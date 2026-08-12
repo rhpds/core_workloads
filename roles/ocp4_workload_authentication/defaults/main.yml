@@ -95,6 +95,8 @@ ocp4_workload_authentication_htpasswd_secret_name: htpasswd
 # Keycloak Settings
 # --------------------------------
 
+ocp4_workload_authentication_keycloak_host_prefix: sso
+
 ocp4_workload_authentication_keycloak_namespace: keycloak
 
 ocp4_workload_authentication_keycloak_channel: stable-v26.2

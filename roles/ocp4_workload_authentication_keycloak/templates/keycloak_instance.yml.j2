@@ -17,7 +17,7 @@ spec:
       name: keycloak-pgsql-user
     vendor: postgres
   hostname:
-    hostname: sso.{{ openshift_cluster_ingress_domain }}
+    hostname: {{ ocp4_workload_authentication_keycloak_host_prefix }}.{{ openshift_cluster_ingress_domain }}
     strict: false
     strictBackchannel: false
   http:
