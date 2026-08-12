@@ -3,7 +3,7 @@ apiVersion: route.openshift.io/v1
 metadata:
   name: keycloak
 spec:
-  host: sso.{{ openshift_cluster_ingress_domain }}
+  host: {{ ocp4_workload_authentication_keycloak_host_prefix }}.{{ openshift_cluster_ingress_domain }}
   to:
     kind: Service
     name: keycloak

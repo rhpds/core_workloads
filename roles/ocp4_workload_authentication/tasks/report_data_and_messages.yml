@@ -6,7 +6,7 @@
       is enabled on this cluster.
 
       {% if ocp4_workload_authentication_provider == 'keycloak' %}
-      Keycloak admin console: https://sso.{{ openshift_cluster_ingress_domain }}
+      Keycloak admin console: https://{{ ocp4_workload_authentication_keycloak_host_prefix }}.{{ openshift_cluster_ingress_domain }}
 
       Keycloak admin user: {{ _ocp4_workload_authentication_keycloak_admin_username }}
 
@@ -44,7 +44,7 @@
   when: ocp4_workload_authentication_provider == 'keycloak'
   agnosticd.core.agnosticd_user_info:
     data:
-      keycloak_admin_console: https://sso.{{ openshift_cluster_ingress_domain }}
+      keycloak_admin_console: https://{{ ocp4_workload_authentication_keycloak_host_prefix }}.{{ openshift_cluster_ingress_domain }}
       keycloak_admin_user: "{{ _ocp4_workload_authentication_keycloak_admin_username }}"
       keycloak_admin_password: "{{ _ocp4_workload_authentication_keycloak_admin_password }}"
 

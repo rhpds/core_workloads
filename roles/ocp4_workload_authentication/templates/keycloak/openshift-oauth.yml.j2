@@ -21,4 +21,4 @@ spec:
         name: openid-client-secret-bb6zw
       extraScopes: []
       issuer: >-
-        https://sso.{{ openshift_cluster_ingress_domain }}/realms/{{ ocp4_workload_authentication_keycloak_default_realm }}
+        https://{{ ocp4_workload_authentication_keycloak_host_prefix }}.{{ openshift_cluster_ingress_domain }}/realms/{{ ocp4_workload_authentication_keycloak_default_realm }}

@@ -124,11 +124,11 @@
   agnosticd.core.agnosticd_user_info:
     msg: >-
       Authentication via Keycloak is enabled on this cluster.
-      Keycloak admin console: https://sso.{{ openshift_cluster_ingress_domain }}
+      Keycloak admin console: https://{{ ocp4_workload_authentication_keycloak_host_prefix }}.{{ openshift_cluster_ingress_domain }}
       Keycloak admin user: {{ r_keycloak_credentials.resources[0].data.username | b64decode }}
       Keycloak admin password: {{ r_keycloak_credentials.resources[0].data.password | b64decode }}
     data:
-      keycloak_admin_console: https://sso.{{ openshift_cluster_ingress_domain }}
+      keycloak_admin_console: https://{{ ocp4_workload_authentication_keycloak_host_prefix }}.{{ openshift_cluster_ingress_domain }}
       keycloak_admin_user: "{{ r_keycloak_credentials.resources[0].data.username | b64decode }}"
       keycloak_admin_password: "{{ r_keycloak_credentials.resources[0].data.password | b64decode }}"
       openshift_api_server_url: "{{ openshift_api_url }}"
