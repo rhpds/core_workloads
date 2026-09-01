@@ -110,6 +110,17 @@
         plugins:
         - odf-console
 
+- name: Wait until BackingStore exists
+  kubernetes.core.k8s_info:
+    api_version: noobaa.io/v1alpha1
+    kind: BackingStore
+    name: noobaa-default-backing-store
+    namespace: openshift-storage
+  register: r_backingstore_exists
+  until: r_backingstore_exists.resources | default([]) | length > 0
+  retries: 30
+  delay: 10
+
 - name: Wait until BackingStore is available
   kubernetes.core.k8s_info:
     api_version: noobaa.io/v1alpha1
@@ -124,11 +135,6 @@
       status: "True"
       type: Available
   register: r_backingstore
-  until:
-  - r_backingstore.resources is defined
-  - r_backingstore.resources | length > 0
-  retries: 60
-  delay: 10
 
 - name: Change BackingStore numVolumes in pvPool
   kubernetes.core.k8s:
