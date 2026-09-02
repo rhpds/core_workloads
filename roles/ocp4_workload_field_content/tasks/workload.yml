@@ -1,8 +1,8 @@
 ---
-- name: Validate field content repository URL is provided
-  ansible.builtin.fail:
-    msg: "ocp4_workload_field_content_gitops_repo_url is required but not provided"
-  when: ocp4_workload_field_content_gitops_repo_url == "" or ocp4_workload_field_content_gitops_repo_url is not defined
+# URL set → BYO Application (existing path). URL empty → community catalog ApplicationSet.
+- name: Determine field content GitOps mode
+  ansible.builtin.set_fact:
+    _ocp4_workload_field_content_byo: "{{ (ocp4_workload_field_content_gitops_repo_url | default('') | string | trim | length) > 0 }}"
 
 # ===================================================================
 # Check for LiteMaaS credentials (optional - passed from AgnosticV)
@@ -36,7 +36,9 @@
   kubernetes.core.k8s:
     state: present
     template: repository-secret.yaml.j2
-  when: ocp4_workload_field_content_gitops_repo_key | default('') | length > 0
+  when:
+  - _ocp4_workload_field_content_byo | bool
+  - ocp4_workload_field_content_gitops_repo_key | default('') | length > 0
 
 # ===================================================================
 # Build Helm values
@@ -47,10 +49,21 @@
       deployer:
         domain: "{{ openshift_cluster_ingress_domain }}"
         apiUrl: "{{ openshift_api_url }}"
-      gitops:
-        repoURL: "{{ ocp4_workload_field_content_gitops_repo_url }}"
-        revision: "{{ ocp4_workload_field_content_gitops_repo_revision }}"
-        path: "{{ ocp4_workload_field_content_gitops_repo_path }}"
+
+# BYO only. Catalog charts already declare gitops.repoUrl in their own values.yaml.
+- name: Add BYO gitops values
+  when: _ocp4_workload_field_content_byo | bool
+  ansible.builtin.set_fact:
+    _ocp4_workload_field_content_deployer_values: >-
+      {{
+        _ocp4_workload_field_content_deployer_values | combine({
+          'gitops': {
+            'repoURL': ocp4_workload_field_content_gitops_repo_url,
+            'revision': ocp4_workload_field_content_gitops_repo_revision,
+            'path': ocp4_workload_field_content_gitops_repo_path
+          }
+        })
+      }}
 
 - name: Add LiteMaaS credentials to Helm values (if available)
   ansible.builtin.set_fact:
@@ -107,11 +120,13 @@
 # Deploy via ArgoCD
 # ===================================================================
 - name: Create field content ArgoCD application
+  when: _ocp4_workload_field_content_byo | bool
   kubernetes.core.k8s:
     state: present
     template: application.yaml.j2
 
 - name: Verify ArgoCD application was accepted
+  when: _ocp4_workload_field_content_byo | bool
   kubernetes.core.k8s_info:
     api_version: argoproj.io/v1alpha1
     kind: Application
@@ -123,3 +138,23 @@
   until:
     - argocd_field_content.resources | length > 0
   failed_when: argocd_field_content.resources | length == 0
+
+- name: Create field content catalog ApplicationSet
+  when: not (_ocp4_workload_field_content_byo | bool)
+  kubernetes.core.k8s:
+    state: present
+    template: applicationset.yaml.j2
+
+- name: Verify catalog ApplicationSet was accepted
+  when: not (_ocp4_workload_field_content_byo | bool)
+  kubernetes.core.k8s_info:
+    api_version: argoproj.io/v1alpha1
+    kind: ApplicationSet
+    name: "{{ ocp4_workload_field_content_catalog_applicationset_name }}"
+    namespace: "{{ ocp4_workload_field_content_namespace }}"
+  register: argocd_field_content_catalog
+  retries: 6
+  delay: 10
+  until:
+    - argocd_field_content_catalog.resources | length > 0
+  failed_when: argocd_field_content_catalog.resources | length == 0

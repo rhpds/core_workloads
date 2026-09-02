@@ -1,0 +1,40 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: {{ ocp4_workload_field_content_catalog_applicationset_name }}
+  namespace: {{ ocp4_workload_field_content_namespace }}
+  labels:
+    demo.redhat.com/application: "field-content-catalog"
+spec:
+  generators:
+  - git:
+      repoURL: {{ ocp4_workload_field_content_catalog_repo_url }}
+      revision: {{ ocp4_workload_field_content_catalog_repo_revision }}
+      files:
+      - path: "{{ ocp4_workload_field_content_catalog_files_path }}"
+  template:
+    metadata:
+      name: '{{ "{{name}}" }}'
+      namespace: {{ ocp4_workload_field_content_namespace }}
+      labels:
+        demo.redhat.com/application: '{{ "{{name}}" }}'
+        demo.redhat.com/field-content-catalog: "true"
+    spec:
+      project: default
+      source:
+        repoURL: '{{ "{{repoURL}}" }}'
+        targetRevision: '{{ "{{revision}}" }}'
+        path: '{{ "{{path}}" }}'
+        helm:
+          values: |
+            {{ _ocp4_workload_field_content_all_values
+             | to_nice_yaml
+             | indent(width=12, first=False)
+            }}
+      destination:
+        namespace: {{ ocp4_workload_field_content_namespace }}
+        server: https://kubernetes.default.svc
+      syncPolicy:
+        syncOptions:
+        - CreateNamespace=true
