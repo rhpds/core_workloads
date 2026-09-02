@@ -27,6 +27,7 @@ ocp4_workload_external_odf_volume_binding_mode: WaitForFirstConsumer
 ocp4_workload_external_odf_registry_storage_class: ocs-external-storagecluster-ceph-rbd
 
 ocp4_workload_external_odf_operator_namespace: openshift-storage
+ocp4_workload_external_odf_reconcile_operator_selector: name=ocs-operator
 ocp4_workload_external_odf_channel: stable-4.18
 ocp4_workload_external_odf_operator_automatic_install_plan_approval: true
 ocp4_workload_external_odf_operator_starting_csv: ""
