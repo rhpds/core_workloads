@@ -2,13 +2,13 @@
 - name: Set up ODF operator namespace
   kubernetes.core.k8s:
     state: present
-    src: odf-ns.yaml
+    template: odf-ns.yaml.j2
 
 - name: Deploy CSI Images for OCP 5
   when: ocp4_workload_external_odf_csi_images_file | default('') | length > 0
   kubernetes.core.k8s:
     state: present
-    src: "{{ ocp4_workload_external_odf_csi_images_file }}"
+    template: "{{ ocp4_workload_external_odf_csi_images_file }}"
 
 - name: Install ODF operator
   ansible.builtin.include_role:

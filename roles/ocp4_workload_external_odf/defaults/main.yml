@@ -28,7 +28,7 @@ ocp4_workload_external_odf_registry_storage_class: ocs-external-storagecluster-c
 
 # File to deploy with CSI Images for OCP 5 - this is a workaround until ODF 5 is released.
 ocp4_workload_external_odf_csi_images_file: ""
-# ocp4_workload_external_odf_csi_images_file: cnv-images-v5.0.yaml
+# ocp4_workload_external_odf_csi_images_file: cnv-images-v5.0.yaml.j2
 
 ocp4_workload_external_odf_operator_namespace: openshift-storage
 ocp4_workload_external_odf_reconcile_operator_selector: name=ocs-operator
