@@ -11,6 +11,7 @@
 # Automatically injected values available in your Helm chart:
 #   deployer.domain  - Cluster ingress domain (e.g., apps.cluster.example.com)
 #   deployer.apiUrl  - Cluster API URL (e.g., https://api.cluster.example.com:6443)
+#   argocd.project   - AppProject for child Applications (default: deployed)
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -58,6 +59,10 @@ ocp4_workload_field_content_catalog_repo_url: https://github.com/rhpds/field-sou
 ocp4_workload_field_content_catalog_repo_revision: main
 ocp4_workload_field_content_catalog_files_path: catalog/tested/*.yaml
 ocp4_workload_field_content_catalog_applicationset_name: field-content-catalog
+
+# AppProject for child Applications after a catalog (or BYO) demo is synced.
+# Catalog tiles and the BYO parent Application stay in `default`.
+ocp4_workload_field_content_deployed_project: deployed
 
 # -----------------------------------------------------------------------------
 # Optional: LiteMaaS/MaaS credentials

@@ -9,6 +9,8 @@ The Field Content workload either lists the community catalog as unsynced Argo A
 - **Catalog (default):** `ocp4_workload_field_content_gitops_repo_url` is empty. Creates ApplicationSet `field-content-catalog` from `catalog/tested/*.yaml` in the field-sourced-content-template repo. Generated Applications have no automated sync.
 - **BYO:** URL is set. Creates Application `field-content` against that repo, same as before (automated sync with prune/selfHeal off).
 
+Catalog tiles and the BYO parent Application stay in the Argo `default` project (the list the UI opens on). Child Applications created after Sync go to AppProject `deployed`. Charts that honor `{{ .Values.argocd.project }}` pick this up from injected Helm values.
+
 The two modes are exclusive. The developer still owns what happens after the Application exists.
 
 ## Deployment Behavior
@@ -145,6 +147,8 @@ The following values are automatically injected into your Helm chart and can be 
 deployer:
   domain: "apps.cluster-guid.guid.sandbox.opentlc.com"
   apiUrl: "https://api.cluster-guid.guid.sandbox.opentlc.com:6443"
+argocd:
+  project: "deployed"
 ```
 
 Use these in your templates:

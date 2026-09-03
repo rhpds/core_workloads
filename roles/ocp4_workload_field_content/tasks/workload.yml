@@ -102,6 +102,12 @@
         users: "{{ _ocp4_workload_field_content_multi_user_usernames | default([]) }}"
   when: (create_multi_user | bool) | default(false)
 
+- name: Set Argo CD project for child Applications
+  ansible.builtin.set_fact:
+    _ocp4_workload_field_content_argocd_values:
+      argocd:
+        project: "{{ ocp4_workload_field_content_deployed_project }}"
+
 - name: Combine all Helm values
   ansible.builtin.set_fact:
     _ocp4_workload_field_content_all_values: >-
@@ -110,6 +116,7 @@
         | combine(_ocp4_workload_field_content_deployer_values)
         | combine(_ocp4_workload_field_content_litemaas_values)
         | combine(_ocp4_workload_field_content_multi_user_values | default({}))
+        | combine(_ocp4_workload_field_content_argocd_values, recursive=True)
       }}
 
 - name: Debug final Helm values
@@ -119,6 +126,11 @@
 # ===================================================================
 # Deploy via ArgoCD
 # ===================================================================
+- name: Create AppProject for synced child Applications
+  kubernetes.core.k8s:
+    state: present
+    template: appproject-deployed.yaml.j2
+
 - name: Create field content ArgoCD application
   when: _ocp4_workload_field_content_byo | bool
   kubernetes.core.k8s:
