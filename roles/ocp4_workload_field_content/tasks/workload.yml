@@ -37,8 +37,8 @@
     state: present
     template: repository-secret.yaml.j2
   when:
-  - _ocp4_workload_field_content_byo | bool
-  - ocp4_workload_field_content_gitops_repo_key | default('') | length > 0
+    - _ocp4_workload_field_content_byo | bool
+    - ocp4_workload_field_content_gitops_repo_key | default('') | length > 0
 
 # ===================================================================
 # Build Helm values
