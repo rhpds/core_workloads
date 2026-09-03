@@ -54,7 +54,7 @@
   # HyperConverged must have been created with .spec.featureGates.enableCommonBootImageImport: false
   # See template for that logic
   - name: Set boot sources to use PVCs
-    when: not ocp4_workload_openshift_virtualization_boot_sources_shapshot | bool
+    when: not ocp4_workload_openshift_virtualization_boot_sources_snapshot | bool
     block:
     - name: Get all available storage classes
       kubernetes.core.k8s_info:

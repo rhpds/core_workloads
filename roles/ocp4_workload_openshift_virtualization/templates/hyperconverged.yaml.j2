@@ -11,7 +11,7 @@ spec:
       tolerations:
         {{ ocp4_workload_openshift_virtualization_workload_tolerations | to_yaml }}
 {% endif %}
-{% if ocp4_workload_openshift_virtualization_boot_sources_shapshot | default(true) | bool %}
+{% if ocp4_workload_openshift_virtualization_boot_sources_snapshot | default(true) | bool %}
   enableCommonBootImageImport: true
 {% else %}
   enableCommonBootImageImport: false

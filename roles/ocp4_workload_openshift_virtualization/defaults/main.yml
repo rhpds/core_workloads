@@ -30,7 +30,7 @@ ocp4_workload_openshift_virtualization_workload_tolerations: []
 # For deployments on top of CNV with Ceph set to false
 # When set to false CNV is configured to use PVCs for boot sources
 # which elminiates VolumeSnapshots without associated PVCs
-ocp4_workload_openshift_virtualization_boot_sources_shapshot: true
+ocp4_workload_openshift_virtualization_boot_sources_snapshot: true
 
 # For AWS it is possible to use KubeVirt without a metal node
 # For that the subscription for the operator needs to have special config
