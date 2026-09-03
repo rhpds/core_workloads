@@ -25,7 +25,7 @@ spec:
       source:
         repoURL: '{{ "{{repoURL}}" }}'
         targetRevision: '{{ "{{revision}}" }}'
-        path: '{{ "{{path}}" }}'
+        path: '{{ "{{chartPath}}" }}'
         helm:
           values: |
             {{ _ocp4_workload_field_content_all_values
