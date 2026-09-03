@@ -1,4 +1,47 @@
 ---
+- name: Get ClusterIssuer info
+  kubernetes.core.k8s_info:
+    api_version: cert-manager.io/v1
+    kind: ClusterIssuer
+    name: acme-bifrost-production-ddns
+  register: r_clusterissuer
+
+- name: Create specific CNAME record for central
+  when: r_clusterissuer.resources | default([]) | length > 0
+  block:
+  - name: Set facts from ClusterIssuer
+    vars:
+      _webhook: "{{ r_clusterissuer.resources[0].spec.acme.solvers[0].dns01.webhook.config }}"
+    ansible.builtin.set_fact:
+      ddns_server: "{{ _webhook.ddnsServer }}"
+      ddns_zone: "{{ _webhook.ddnsZone }}"
+      tsig_key_name: "{{ _webhook.tsigKeyName }}"
+      tsig_secret_ref_name: "{{ _webhook.tsigSecretRef.name }}"
+      tsig_secret_ref_key: "{{ _webhook.tsigSecretRef.key }}"
+  - name: Get TSIG secret value
+    kubernetes.core.k8s_info:
+      api_version: v1
+      kind: Secret
+      name: "{{ tsig_secret_ref_name }}"
+      namespace: cert-manager
+    register: r_tsig_secret
+  - name: Set TSIG secret fact
+    ansible.builtin.set_fact:
+      tsig_secret: "{{ r_tsig_secret.resources[0].data[tsig_secret_ref_key] | b64decode }}"
+
+  - name: Create specific CNAME record for central
+    community.general.nsupdate:
+      server: "{{ lookup('community.general.dig', ddns_server) }}"
+      zone: "{{ ddns_zone }}"
+      record: "central-{{ ocp4_workload_rhacs_central_namespace }}.{{ openshift_cluster_ingress_domain | replace('.' + ddns_zone, '') }}"
+      type: CNAME
+      ttl: 30
+      port: "{{ cluster_dns_port | d('53') }}"
+      value: "console-openshift-console.{{ openshift_cluster_ingress_domain }}."
+      key_name: "{{ tsig_key_name }}"
+      key_secret: "{{ tsig_secret }}"
+      key_algorithm: "hmac-sha256"
+
 # Check for existing valid certificate and skip provisioning if found
 - name: Check if valid Certificate already exists
   kubernetes.core.k8s_info:
