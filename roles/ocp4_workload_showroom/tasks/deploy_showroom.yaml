@@ -88,3 +88,7 @@
     api_key: "{{ ocp4_workload_showroom_openshift_api_token | default(omit) }}"
     validate_certs: false
     definition: "{{ r_helm_templates.stdout | from_yaml_all }}"
+  register: r_deploy_manifests
+  until: r_deploy_manifests is successful
+  retries: 5
+  delay: 15
