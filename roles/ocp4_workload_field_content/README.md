@@ -4,14 +4,21 @@ This workload enables self-service deployment of field-developed content using G
 
 ## Overview
 
-The Field Content workload creates an ArgoCD Application pointing to a developer's GitOps repository. The developer controls all aspects of their deployment through their repository, while this role provides minimal orchestration and integration with RHDP infrastructure.
+The Field Content workload either lists the community catalog as unsynced Argo Applications, or deploys one chart from a URL the orderer provided.
+
+- **Catalog (default):** `ocp4_workload_field_content_gitops_repo_url` is empty. Creates ApplicationSet `field-content-catalog` from `catalog/tested/*.yaml` in the field-sourced-content-template repo. Generated Applications have no automated sync.
+- **BYO:** URL is set. Creates Application `field-content` against that repo, same as before (automated sync with prune/selfHeal off).
+
+Catalog tiles and the BYO parent Application stay in the Argo `default` project (the list the UI opens on). Child Applications created after Sync go to AppProject `deployed`. Charts that honor `{{ .Values.argocd.project }}` pick this up from injected Helm values.
+
+The two modes are exclusive. The developer still owns what happens after the Application exists.
 
 ## Deployment Behavior
 
 This role uses a **fire-and-forget** approach:
 
-1. Creates the ArgoCD Application pointing to your repository
-2. Verifies the Application was accepted by the cluster (~1 minute max)
+1. Creates the ArgoCD Application (BYO) or ApplicationSet (catalog)
+2. Verifies the object was accepted by the cluster (~1 minute max)
 3. Exits immediately — does **not** wait for sync or health status
 
 **Why fire-and-forget?**
@@ -45,7 +52,21 @@ Use ArgoCD **sync waves** to control the order of deployment. For example:
 - Wave 2: Ansible Job (waits for operator, performs complex setup)
 - Wave 3: Application deployment
 
-## Required Variables
+## Modes
+
+### Community catalog (URL empty)
+
+No GitOps URL is required. The role creates an ApplicationSet whose git files generator reads stubs from:
+
+```yaml
+ocp4_workload_field_content_catalog_repo_url: https://github.com/rhpds/field-sourced-content-template.git
+ocp4_workload_field_content_catalog_repo_revision: main
+ocp4_workload_field_content_catalog_files_path: catalog/tested/*.yaml
+```
+
+Each stub is a pointer (`name`, `repoURL`, `revision`, `path`). Applications are created unsynced.
+
+### Bring your own repo (URL set)
 
 ```yaml
 ocp4_workload_field_content_gitops_repo_url: "https://github.com/developer/my-field-content"
@@ -126,6 +147,8 @@ The following values are automatically injected into your Helm chart and can be 
 deployer:
   domain: "apps.cluster-guid.guid.sandbox.opentlc.com"
   apiUrl: "https://api.cluster-guid.guid.sandbox.opentlc.com:6443"
+argocd:
+  project: "deployed"
 ```
 
 Use these in your templates:
