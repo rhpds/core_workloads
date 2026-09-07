@@ -29,6 +29,11 @@ spec:
 {%endif%}
   lightspeed:
     disabled: {{ ocp4_workload_ansible_automation_platform_disable_lightspeed }}
+{% if not ocp4_workload_ansible_automation_platform_disable_mcp %}
+  mcp:
+    allow_write_operations: true
+    disabled: false
+{%endif%}
   no_log: true
   redis_mode: standalone
   route_tls_termination_mechanism: Edge
