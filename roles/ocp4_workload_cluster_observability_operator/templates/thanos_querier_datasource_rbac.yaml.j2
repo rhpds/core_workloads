@@ -1,0 +1,19 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: thanos-querier-datasource
+  namespace: {{ ocp4_workload_cluster_observability_operator_namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: thanos-querier-datasource
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-monitoring-view
+subjects:
+- kind: ServiceAccount
+  name: thanos-querier-datasource
+  namespace: {{ ocp4_workload_cluster_observability_operator_namespace }}

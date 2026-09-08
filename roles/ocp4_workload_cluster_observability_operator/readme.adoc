@@ -1,0 +1,3 @@
+= ocp4_workload_cluster_observability_operator - Install Cluster Observability Operator
+
+See defaults/main.yml for variables to set.
