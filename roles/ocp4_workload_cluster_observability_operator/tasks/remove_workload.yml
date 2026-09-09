@@ -1,0 +1,4 @@
+---
+- name: Print unsupported message
+  ansible.builtin.debug:
+    msg: "Removing the Cluster Observability Operator is not implemented."

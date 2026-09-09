@@ -1,0 +1,16 @@
+---
+galaxy_info:
+  role_name: ocp4_workload_cluster_observability_operator
+  author: Red Hat, Nate Stephany (nstephan@redhat.com)
+  description: |
+    Set up the Cluster Observability Operator on OpenShift.
+  license: MIT
+  min_ansible_version: "2.9"
+  platforms: []
+  galaxy_tags:
+  - ocp
+  - openshift
+  - observability
+  - monitoring
+  - perses
+dependencies: []
