@@ -101,6 +101,17 @@ spec:
               termination: {{ ocp4_workload_s4_route_tls_termination }}
               insecureEdgeTerminationPolicy: {{ ocp4_workload_s4_route_tls_insecure_policy }}
 {% endif %}
+{% if ocp4_workload_s4_ceph_config_enabled %}
+
+        # Ceph RGW configuration (file descriptor leak mitigation)
+        ceph:
+          config:
+            enabled: true
+            rgw_max_concurrent_requests: {{ ocp4_workload_s4_ceph_rgw_max_concurrent_requests }}
+            rgw_thread_pool_size: {{ ocp4_workload_s4_ceph_rgw_thread_pool_size }}
+            rgw_op_thread_timeout: {{ ocp4_workload_s4_ceph_rgw_op_thread_timeout }}
+            rgw_max_chunk_size: {{ ocp4_workload_s4_ceph_rgw_max_chunk_size }}
+{% endif %}
 
   destination:
     server: https://kubernetes.default.svc

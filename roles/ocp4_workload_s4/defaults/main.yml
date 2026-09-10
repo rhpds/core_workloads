@@ -14,8 +14,8 @@ ocp4_workload_s4_application_name: s4
 ocp4_workload_s4_gitops_namespace: openshift-gitops
 
 # Helm chart configuration
-ocp4_workload_s4_chart_repo: https://github.com/rh-aiservices-bu/s4
-ocp4_workload_s4_chart_revision: v0.3.2
+ocp4_workload_s4_chart_repo: https://github.com/rhpds/s4
+ocp4_workload_s4_chart_revision: main
 ocp4_workload_s4_chart_path: charts/s4
 
 # --------------------------------------------------
@@ -58,6 +58,19 @@ ocp4_workload_s4_storage_local_paths: ""  # Comma-separated paths
 # Storage limits
 ocp4_workload_s4_storage_max_file_size_gb: 20
 ocp4_workload_s4_storage_max_concurrent_transfers: 2
+
+# --------------------------------------------------
+# Ceph RGW configuration (file descriptor leak mitigation)
+# --------------------------------------------------
+# Enable custom Ceph configuration
+ocp4_workload_s4_ceph_config_enabled: false
+
+# Ceph RGW tuning parameters
+# These settings help mitigate file descriptor leaks in radosgw
+ocp4_workload_s4_ceph_rgw_max_concurrent_requests: 100
+ocp4_workload_s4_ceph_rgw_thread_pool_size: 64
+ocp4_workload_s4_ceph_rgw_op_thread_timeout: 30
+ocp4_workload_s4_ceph_rgw_max_chunk_size: 4194304
 
 # --------------------------------------------------
 # Resource configuration
