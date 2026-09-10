@@ -132,10 +132,11 @@
     _ocp4_workload_authentication_rosa_aws_user_pool_id: "{{ r_aws_user_pool_id.stdout }}"
 
 - name: Create Cognito user pool domain
-  ansible.builtin.shell: >-
+  ansible.builtin.command: >-
     aws cognito-idp create-user-pool-domain
     --domain "rosa-{{ guid }}"
     --user-pool-id {{ _ocp4_workload_authentication_rosa_aws_user_pool_id }}
+  changed_when: true
 
 - name: Add users to Cognito user pool
   # yamllint disable rule:line-length
@@ -155,6 +156,7 @@
     --user-attributes Name=name,Value="{{ ocp4_workload_authentication_rosa_user_base }}{{ item + 1 }}" Name="email",Value="user{{ item + 1 }}@rosaworkshop.com" Name="email_verified",Value="true"
     --message-action SUPPRESS
     {%- endif -%}
+  changed_when: true
   loop: "{{ range(0, ocp4_workload_authentication_rosa_user_count | int, 1) | list }}"
   # yamllint enable rule:line-length
 
@@ -173,6 +175,7 @@
     --password {{ _ocp4_workload_authentication_rosa_user_passwords[item] }}
     --permanent
     {%- endif -%}
+  changed_when: true
   loop: "{{ range(0, ocp4_workload_authentication_rosa_user_count | int, 1) | list }}"
 # noqa: jinja[spacing]
 
@@ -265,20 +268,22 @@
         Cognito Admin user '{{ ocp4_workload_authentication_rosa_admin_user }}' will be created
         with password '{{ _ocp4_workload_authentication_rosa_admin_password }}'.
   - name: Create Cognito admin user
-    ansible.builtin.shell: >-
+    ansible.builtin.command: >-
       aws cognito-idp admin-create-user
       --user-pool-id {{ _ocp4_workload_authentication_rosa_aws_user_pool_id }}
       --username {{ ocp4_workload_authentication_rosa_admin_user }}
       --temporary-password {{ _ocp4_workload_authentication_rosa_admin_password }}
       --user-attributes Name=name,Value="Cluster Administrator" Name="email",Value="admin@rosaworkshop.com" Name="email_verified",Value="true"
       --message-action SUPPRESS
+    changed_when: true
   - name: Set permanent admin password
-    ansible.builtin.shell: >-
+    ansible.builtin.command: >-
       aws cognito-idp admin-set-user-password
       --user-pool-id {{ _ocp4_workload_authentication_rosa_aws_user_pool_id }}
       --username {{ ocp4_workload_authentication_rosa_admin_user }}
       --password {{ _ocp4_workload_authentication_rosa_admin_password }}
       --permanent
+    changed_when: true
   - name: Add admin to cluster admin role
     kubernetes.core.k8s:
       state: present
@@ -287,7 +292,7 @@
     until: r_cluster_admin_role_binding is successful
     delay: 15
     retries: 20
-  - name: save admin user info
+  - name: Save admin user info
     agnosticd_user_info:
       data:
         openshift_cluster_admin_username: "{{ ocp4_workload_authentication_rosa_admin_user }}"
