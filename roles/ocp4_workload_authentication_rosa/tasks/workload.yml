@@ -330,7 +330,7 @@
       openshift_cluster_user_password: "{{ ocp4_workload_authentication_rosa_user_password }}"
 
 - name: Save user information
-  when: "{{ ocp4_workload_authentication_rosa_num_users | int > 1 }}"
+  when: ocp4_workload_authentication_rosa_num_users | int > 1
   agnosticd.core.agnosticd_user_info:
     user: "{{ ocp4_workload_authentication_rosa_user_basename }}{{ n + 1 }}"
     data:
