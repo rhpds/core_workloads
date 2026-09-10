@@ -298,7 +298,7 @@
   - name: Add admin to cluster admin role
     kubernetes.core.k8s:
       state: present
-      definition: "{{ lookup('template', 'cluster_role_binding.yaml.j2') | from_yaml }}"
+      template: cluster_role_binding.yml.j2
     register: r_cluster_admin_role_binding
     until: r_cluster_admin_role_binding is successful
     delay: 15
