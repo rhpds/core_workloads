@@ -111,6 +111,9 @@ spec:
             rgw_thread_pool_size: {{ ocp4_workload_s4_ceph_rgw_thread_pool_size }}
             rgw_op_thread_timeout: {{ ocp4_workload_s4_ceph_rgw_op_thread_timeout }}
             rgw_max_chunk_size: {{ ocp4_workload_s4_ceph_rgw_max_chunk_size }}
+          ulimit:
+            enabled: {{ ocp4_workload_s4_ceph_ulimit_enabled | lower }}
+            nofile: {{ ocp4_workload_s4_ceph_ulimit_nofile }}
 {% endif %}
 
   destination:
