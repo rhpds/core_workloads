@@ -255,6 +255,7 @@
     ansible.builtin.set_fact:
       _ocp4_workload_authentication_rosa_admin_password: >-
         {{ ocp4_workload_authentication_rosa_admin_password }}
+
   - name: Generate cluster admin password
     when: ocp4_workload_authentication_rosa_admin_password | default('') | length == 0
     ansible.builtin.set_fact:
@@ -262,11 +263,13 @@
         {{ lookup('password', '/dev/null chars=ascii_letters,digits '
             ~ 'length=' ~ ocp4_workload_authentication_rosa_admin_password_length
         ) }}
+
   - name: Print admin credentials
     ansible.builtin.debug:
       msg: >-
         Cognito Admin user '{{ ocp4_workload_authentication_rosa_admin_username }}' will be created
         with password '{{ _ocp4_workload_authentication_rosa_admin_password }}'.
+
   - name: Create Cognito admin user
     ansible.builtin.command: >-
       aws cognito-idp admin-create-user
@@ -276,6 +279,7 @@
       --user-attributes Name=name,Value="Cluster Administrator" Name="email",Value="admin@rosaworkshop.com" Name="email_verified",Value="true"
       --message-action SUPPRESS
     changed_when: true
+
   - name: Set permanent admin password
     ansible.builtin.command: >-
       aws cognito-idp admin-set-user-password
@@ -284,6 +288,7 @@
       --password {{ _ocp4_workload_authentication_rosa_admin_password }}
       --permanent
     changed_when: true
+
   - name: Add admin to cluster admin role
     kubernetes.core.k8s:
       state: present
@@ -292,6 +297,7 @@
     until: r_cluster_admin_role_binding is successful
     delay: 15
     retries: 20
+
   - name: Save admin user info
     agnosticd.core.agnosticd_user_info:
       data:
@@ -318,7 +324,7 @@
       openshift_cluster_user_password: "{{ ocp4_workload_authentication_rosa_user_password }}"
 
 - name: Save user information
-  when: ocp4_workload_authentication_rosa_enable_user_info_data | bool
+  when: "{{ ocp4_workload_authentication_rosa_num_users | int > 1 }}"
   agnosticd.core.agnosticd_user_info:
     user: "{{ ocp4_workload_authentication_rosa_user_basename }}{{ n + 1 }}"
     data:
