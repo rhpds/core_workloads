@@ -74,8 +74,8 @@ ocp4_workload_s4_ceph_rgw_max_chunk_size: 4194304
 
 # Enable ulimit override (safety net)
 ocp4_workload_s4_ceph_ulimit_enabled: false
-# Maximum number of open files (default: 262144, max typically: 524288)
-ocp4_workload_s4_ceph_ulimit_nofile: 262144
+# Maximum number of open files (default: 65536, max typically: 524288)
+ocp4_workload_s4_ceph_ulimit_nofile: 65536
 
 # --------------------------------------------------
 # Resource configuration
