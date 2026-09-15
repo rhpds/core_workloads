@@ -128,3 +128,22 @@ ocp4_workload_authentication_keycloak_clients: []
 #   redirectUris:
 #   - "https://gitlab-gitlab.{{ openshift_cluster_ingress_domain }}/*"
 #   description: "GitLab OAuth Client"
+
+# --------------------------------
+# Sandbox API Admin Client
+# --------------------------------
+# Shared clusters: create the service-account client and Secret used by
+# the sandbox API to manage generic users through the Keycloak Admin REST
+# API. The sandbox-api-keycloak-admin Secret is created in the same
+# namespace as the Keycloak instance, where sandbox-api discovers it
+# (it lists k8s.keycloak.org Keycloak instances and reads the Secret from
+# the instance's namespace). Must match the rhpds/infra helm/rhbk chart
+# contract so both deployment methods are equivalent.
+ocp4_workload_authentication_keycloak_sandbox_api_admin: false
+ocp4_workload_authentication_keycloak_sandbox_api_admin_client_id: sandbox-api-admin
+# Leave empty to generate a random secret.
+ocp4_workload_authentication_keycloak_sandbox_api_admin_client_secret: ""
+ocp4_workload_authentication_keycloak_sandbox_api_admin_realm_management_roles:
+  - manage-users
+  - view-users
+  - query-users
