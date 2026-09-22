@@ -19,6 +19,10 @@ spec:
       containers:
       - name: postgresql
         image: {{ ocp4_workload_gitlab_postgresql_image }}:{{ ocp4_workload_gitlab_postgresql_image_tag }}
+        args:
+        - run-postgresql
+        - -c
+        - max_locks_per_transaction={{ ocp4_workload_gitlab_postgresql_max_locks_per_transaction }}
         env:
         - name: POSTGRESQL_USER
           valueFrom:
