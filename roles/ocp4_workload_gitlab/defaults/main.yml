@@ -281,6 +281,11 @@ ocp4_workload_gitlab_postgresql_user: gitlab
 ocp4_workload_gitlab_postgresql_password: "{{ lookup('password', '/dev/null chars=ascii_letters,digits length=16') }}"
 ocp4_workload_gitlab_postgresql_database: gitlabhq_production
 
+# PostgreSQL max_locks_per_transaction
+# Default 64 matches PostgreSQL default for backward compatibility.
+# GitLab 18.x requires 256+ for schema migration (GPTEINFRA-18000).
+ocp4_workload_gitlab_postgresql_max_locks_per_transaction: 64
+
 # --------------------------------
 # Redis Settings
 # --------------------------------
