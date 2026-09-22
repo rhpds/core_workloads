@@ -51,7 +51,7 @@
         status: "True"
 
   # For deployments on CNV with external Ceph use PVCs for boot image snapshots
-  # HyperConverged must have been created with .spec.featureGates.enableCommonBootImageImport: false
+  # HyperConverged must have been created with .spec.enableCommonBootImageImport: false
   # See template for that logic
   - name: Set boot sources to use PVCs
     when: not ocp4_workload_openshift_virtualization_boot_sources_snapshot | bool
@@ -117,8 +117,7 @@
         namespace: openshift-cnv
         definition:
           spec:
-            featureGates:
-              enableCommonBootImageImport: true
+            enableCommonBootImageImport: true
 
   - name: Install virtctl to bastion VM
     when: ocp4_workload_openshift_virtualization_install_virtctl | bool
