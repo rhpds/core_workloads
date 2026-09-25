@@ -21,52 +21,57 @@ spec:
       serviceAccountName: s4
       containers:
       - name: create-bucket
-        image: quay.io/minio/mc:latest
+        image: {{ ocp4_workload_s4_bucket_job_image | to_json }}
         command:
         - /bin/sh
         - -c
         - |
           set -e
           echo "Configuring S3 client..."
-          mc alias set s4 http://s4.{{ ocp4_workload_s4_namespace }}.svc.cluster.local:7480 \
-            $AWS_ACCESS_KEY_ID $AWS_SECRET_ACCESS_KEY --insecure
+          aws configure set default.s3.addressing_style path
+          s3api() {
+            aws --endpoint-url "http://s4.{{ ocp4_workload_s4_namespace }}.svc.cluster.local:7480" s3api "$@"
+          }
 
           echo "Waiting for S3 service to be ready..."
           MAX_RETRIES=60
           RETRY=0
-          until mc ls s4 --insecure 2>/dev/null; do
+          until s3api list-buckets >/dev/null 2>&1; do
             RETRY=$((RETRY+1))
-            if [ $RETRY -gt $MAX_RETRIES ]; then
+            if [ $RETRY -ge $MAX_RETRIES ]; then
               echo "ERROR: S3 service did not become ready after $MAX_RETRIES attempts"
-              echo "Attempting bucket creation anyway..."
-              break
+              exit 1
             fi
             echo "S3 service not ready yet (attempt $RETRY/$MAX_RETRIES), waiting..."
             sleep 5
           done
 
           echo "Creating bucket: {{ bucket_name }}"
-          if mc ls s4/{{ bucket_name }} --insecure 2>/dev/null; then
+          if s3api head-bucket --bucket "{{ bucket_name }}" 2>/dev/null; then
             echo "Bucket {{ bucket_name }} already exists"
           else
-            mc mb s4/{{ bucket_name }} --insecure
+            s3api create-bucket --bucket "{{ bucket_name }}"
             echo "Bucket {{ bucket_name }} created successfully"
           fi
 
           echo "Verifying bucket exists..."
-          mc ls s4/{{ bucket_name }} --insecure
+          s3api head-bucket --bucket "{{ bucket_name }}"
           echo "Bucket creation complete"
         env:
         - name: AWS_ACCESS_KEY_ID
-          value: {{ ocp4_workload_s4_access_key_id }}
+          value: {{ ocp4_workload_s4_access_key_id | to_json }}
         - name: AWS_SECRET_ACCESS_KEY
-          value: {{ ocp4_workload_s4_secret_access_key }}
+          value: {{ ocp4_workload_s4_secret_access_key | to_json }}
         - name: HOME
           value: /tmp
-        - name: MC_CONFIG_DIR
-          value: /tmp/.mc
+        - name: AWS_DEFAULT_REGION
+          value: us-east-1
+        - name: AWS_EC2_METADATA_DISABLED
+          value: "true"
+        - name: AWS_PAGER
+          value: ""
         volumeMounts:
-        - name: mc-config
+        - name: aws-config
           mountPath: /tmp
         resources:
           requests:
@@ -76,5 +81,5 @@ spec:
             cpu: 500m
             memory: 256Mi
       volumes:
-      - name: mc-config
+      - name: aws-config
         emptyDir: {}
