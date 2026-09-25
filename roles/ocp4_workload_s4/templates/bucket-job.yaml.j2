@@ -21,7 +21,7 @@ spec:
       serviceAccountName: s4
       containers:
       - name: create-bucket
-        image: quay.io/minio/mc:latest
+        image: {{ ocp4_workload_s4_bucket_job_image | to_json }}
         command:
         - /bin/sh
         - -c

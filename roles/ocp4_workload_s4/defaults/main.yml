@@ -105,6 +105,10 @@ ocp4_workload_s4_s3_api_host: ""  # Auto-generated if empty
 # Example: ['datasets', 'ml-models', 'backups']
 ocp4_workload_s4_buckets: []
 
+# Image containing the mc client for bucket creation (amd64)
+ocp4_workload_s4_bucket_job_image: >-
+  quay.io/rh-aiservices-bu/minio:RELEASE.2025-09-07T16-13-09Z@sha256:a614d3fd833e346ab37cd0ff0c540f88d5d7ed0d6f0034b20418bb91e1769a51
+
 # --------------------------------------------------
 # ArgoCD sync configuration
 # --------------------------------------------------
