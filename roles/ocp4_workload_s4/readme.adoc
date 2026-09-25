@@ -87,6 +87,7 @@ Username and password can be passed in as parameters. If not provided, username 
 * `ocp4_workload_s4_buckets`: List of S3 bucket names to create (default: `[]`)
 ** If empty or not defined, no buckets will be created
 ** Example: `['datasets', 'ml-models', 'backups']`
+* `ocp4_workload_s4_bucket_job_image`: Image providing `mc` and `/bin/sh` for bucket creation. Defaults to the digest-pinned Red Hat AI Services MinIO mirror (amd64).
 
 === Sync Policy
 
