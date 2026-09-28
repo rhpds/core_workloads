@@ -87,6 +87,20 @@ Username and password can be passed in as parameters. If not provided, username 
 * `ocp4_workload_s4_buckets`: List of S3 bucket names to create (default: `[]`)
 ** If empty or not defined, no buckets will be created
 ** Example: `['datasets', 'ml-models', 'backups']`
+* `ocp4_workload_s4_bucket_job_image`: AWS CLI image for bucket creation Jobs (default: `public.ecr.aws/aws-cli/aws-cli:2.37.1`)
+
+Bucket creation uses the AWS CLI against the internal S4 endpoint, with path-style S3 addressing.
+Existing buckets are preserved. Image overrides must provide `aws` and `/bin/sh`; use a pinned version or digest.
+
+If an earlier bucket Job is stuck pulling an unavailable image, delete that Job before rerunning the role.
+Kubernetes does not allow changing an existing Job's pod template. For example, for the `quay-registry` bucket:
+
+[source,bash]
+----
+oc -n s4 delete job create-bucket-quay-registry
+----
+
+Deleting the Job leaves the S3 bucket and its data intact.
 
 === Sync Policy
 

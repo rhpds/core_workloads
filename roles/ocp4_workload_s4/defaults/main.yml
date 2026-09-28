@@ -105,6 +105,9 @@ ocp4_workload_s4_s3_api_host: ""  # Auto-generated if empty
 # Example: ['datasets', 'ml-models', 'backups']
 ocp4_workload_s4_buckets: []
 
+# AWS CLI image used by bucket creation Jobs (pin a version or digest)
+ocp4_workload_s4_bucket_job_image: public.ecr.aws/aws-cli/aws-cli:2.37.1
+
 # --------------------------------------------------
 # ArgoCD sync configuration
 # --------------------------------------------------
