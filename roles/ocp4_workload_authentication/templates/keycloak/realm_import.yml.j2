@@ -10,6 +10,8 @@ spec:
     realm: {{ ocp4_workload_authentication_keycloak_default_realm }}
     enabled: true
     sslRequired: external
+    userProfile:
+      unmanagedAttributePolicy: ADMIN_EDIT
     registrationAllowed: true
     loginWithEmailAllowed: true
     duplicateEmailsAllowed: false
