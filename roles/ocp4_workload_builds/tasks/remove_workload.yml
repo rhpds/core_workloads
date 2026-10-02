@@ -43,7 +43,9 @@
     kind: Project
     name: openshift-pipelines
 
+# Skip when no bastions inventory (workload-only / partial provision destroy).
 - name: Remove tkn and tkn bash completion
+  when: "'bastions' in groups and groups['bastions'] | length > 0"
   delegate_to: "{{ groups['bastions'][0] }}"
   become: true
   ansible.builtin.file:
@@ -53,6 +55,7 @@
   - /usr/local/bin/tkn
   - /usr/local/bin/tkn-pac
   - /etc/bash_completion.d/tkn
+  ignore_errors: true
 
 - name: Remove Tekton CRDs
   kubernetes.core.k8s:
