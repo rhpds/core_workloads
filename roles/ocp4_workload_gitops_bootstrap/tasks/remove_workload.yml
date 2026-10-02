@@ -1,4 +1,9 @@
 ---
+# Delete the bootstrap Application and wait until it is fully gone.
+# The Application carries resources-finalizer.argocd.argoproj.io, so Argo
+# cascades child Applications / managed resources (including Sync-hook Jobs
+# with argocd.argoproj.io/hook-finalizer). Without waiting, tenant namespace
+# destroy races that cascade and can hang on Terminating namespaces.
 
 - name: Remove bootstrap ArgoCD application
   kubernetes.core.k8s:
@@ -7,3 +12,14 @@
     name: "{{ ocp4_workload_gitops_bootstrap_application_name }}"
     namespace: "{{ ocp4_workload_gitops_bootstrap_namespace }}"
     state: absent
+
+- name: Wait for bootstrap ArgoCD application to be fully removed
+  kubernetes.core.k8s_info:
+    api_version: argoproj.io/v1alpha1
+    kind: Application
+    name: "{{ ocp4_workload_gitops_bootstrap_application_name }}"
+    namespace: "{{ ocp4_workload_gitops_bootstrap_namespace }}"
+  register: r_bootstrap_application
+  retries: "{{ ocp4_workload_gitops_bootstrap_remove_retries }}"
+  delay: "{{ ocp4_workload_gitops_bootstrap_remove_delay }}"
+  until: r_bootstrap_application.resources | length == 0

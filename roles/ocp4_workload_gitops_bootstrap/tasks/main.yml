@@ -3,9 +3,11 @@
 # Do not modify this file
 # --------------------------------------------------
 - name: Running workload provision tasks
-  when: ACTION == "provision"
+  when: ACTION | default('provision') in ['provision', 'create']
   ansible.builtin.include_tasks: workload.yml
 
 - name: Running workload removal tasks
-  when: ACTION == "destroy"
+  # Namespace destroy (config: namespace) passes ACTION=remove;
+  # cluster / openshift-workloads destroy passes ACTION=destroy.
+  when: ACTION | default('provision') in ['remove', 'destroy']
   ansible.builtin.include_tasks: remove_workload.yml
