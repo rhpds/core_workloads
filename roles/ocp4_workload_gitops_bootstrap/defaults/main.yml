@@ -49,3 +49,8 @@ ocp4_workload_gitops_bootstrap_application_sync_required: true # false is great 
 # /operation on child Application CRDs. Has no effect on other resource types.
 # Default: false — existing labs are unaffected unless they opt in.
 ocp4_workload_gitops_bootstrap_application_ignore_tracking: false
+
+# Wait for Application cascade on remove (resources-finalizer + hook Jobs).
+# Matches seaweedfs/s4 remove patterns (30 x 10s = 5 minutes).
+ocp4_workload_gitops_bootstrap_remove_retries: 30
+ocp4_workload_gitops_bootstrap_remove_delay: 10
