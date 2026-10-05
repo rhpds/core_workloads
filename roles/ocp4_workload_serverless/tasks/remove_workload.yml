@@ -51,7 +51,9 @@
   - knative-serving
   - knative-eventing
 
+# Skip when no bastions inventory (workload-only / partial provision destroy).
 - name: Remove kn and kn bash completion
+  when: "'bastions' in groups and groups['bastions'] | length > 0"
   delegate_to: "{{ groups['bastions'][0] }}"
   become: true
   ansible.builtin.file:
@@ -60,6 +62,7 @@
   loop:
   - /usr/bin/kn
   - /etc/bash_completion.d/kn
+  ignore_errors: true
 
 - name: Remove Operator
   ansible.builtin.include_role:
