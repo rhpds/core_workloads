@@ -7,6 +7,10 @@
     name: multiclusterhub
     namespace: open-cluster-management
     wait: true
+    # MultiClusterHub removal cascades through MCE and its components before
+    # the operator drops the finalizer. The module default of 120s is far too
+    # short. Matches ocp_workload_rhacm_hcp.
+    wait_timeout: 1800
 
 - name: Wait until ocm-controller has been terminated
   kubernetes.core.k8s_info:
