@@ -2,7 +2,10 @@
 - name: Remove RHACM MultiClusterHub
   kubernetes.core.k8s:
     state: absent
-    definition: "{{ lookup('file', 'multiclusterhub.yaml') }}"
+    api_version: operator.open-cluster-management.io/v1
+    kind: MultiClusterHub
+    name: multiclusterhub
+    namespace: open-cluster-management
     wait: true
 
 - name: Wait until ocm-controller has been terminated
