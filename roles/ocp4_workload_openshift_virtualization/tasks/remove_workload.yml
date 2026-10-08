@@ -9,10 +9,19 @@
 #
 # Take the first option and clear the workloads first. VirtualMachines go
 # before VirtualMachineInstances, since a running VM owns its VMI and would
-# simply recreate one. The CRDs are gone once the operator has been removed,
-# so a second destroy run must not assume they are registered.
+# simply recreate one.
+#
+# None of these CRDs can be assumed registered. Deleting the HyperConverged
+# takes its operands with it, so SSP in particular is already gone by the time
+# we reach it, and the API versions move between CNV releases. An unknown
+# resource type is a hard error for kubernetes.core.k8s rather than nothing to
+# delete, so look each CRD up and take the version from the cluster.
 
-- name: Look up the KubeVirt workload CRDs
+- name: Initialize the KubeVirt CRD map
+  ansible.builtin.set_fact:
+    _kubevirt_crds: {}
+
+- name: Look up the KubeVirt CRDs
   kubernetes.core.k8s_info:
     api_version: apiextensions.k8s.io/v1
     kind: CustomResourceDefinition
@@ -20,26 +29,35 @@
   loop:
   - virtualmachines.kubevirt.io
   - virtualmachineinstances.kubevirt.io
+  - ssps.ssp.kubevirt.io
+  - kubevirts.kubevirt.io
   register: r_kubevirt_crds
 
-- name: Record which KubeVirt workload CRDs are registered
+- name: Record which KubeVirt CRDs are registered and at which version
   ansible.builtin.set_fact:
     _kubevirt_crds: >-
-      {{ r_kubevirt_crds.results | selectattr('resources') | map(attribute='item') | list }}
+      {{ _kubevirt_crds | combine({
+           item.resources[0].metadata.name:
+             item.resources[0].spec.group ~ '/' ~
+             (item.resources[0].spec.versions | selectattr('storage') | map(attribute='name') | first)
+         }) }}
+  loop: "{{ r_kubevirt_crds.results | selectattr('resources') | list }}"
+  loop_control:
+    label: "{{ item.item }}"
 
 - name: Delete all VirtualMachines
   when: "'virtualmachines.kubevirt.io' in _kubevirt_crds"
   block:
   - name: Find all VirtualMachines
     kubernetes.core.k8s_info:
-      api_version: kubevirt.io/v1
+      api_version: "{{ _kubevirt_crds['virtualmachines.kubevirt.io'] }}"
       kind: VirtualMachine
     register: r_virtualmachines
 
   - name: Remove all VirtualMachines
     kubernetes.core.k8s:
       state: absent
-      api_version: kubevirt.io/v1
+      api_version: "{{ _kubevirt_crds['virtualmachines.kubevirt.io'] }}"
       kind: VirtualMachine
       name: "{{ item.metadata.name }}"
       namespace: "{{ item.metadata.namespace }}"
@@ -54,14 +72,14 @@
   block:
   - name: Find remaining VirtualMachineInstances
     kubernetes.core.k8s_info:
-      api_version: kubevirt.io/v1
+      api_version: "{{ _kubevirt_crds['virtualmachines.kubevirt.io'] }}"
       kind: VirtualMachineInstance
     register: r_virtualmachineinstances
 
   - name: Remove remaining VirtualMachineInstances
     kubernetes.core.k8s:
       state: absent
-      api_version: kubevirt.io/v1
+      api_version: "{{ _kubevirt_crds['virtualmachines.kubevirt.io'] }}"
       kind: VirtualMachineInstance
       name: "{{ item.metadata.name }}"
       namespace: "{{ item.metadata.namespace }}"
@@ -73,7 +91,7 @@
 
   - name: Wait until no VirtualMachineInstances remain
     kubernetes.core.k8s_info:
-      api_version: kubevirt.io/v1
+      api_version: "{{ _kubevirt_crds['virtualmachines.kubevirt.io'] }}"
       kind: VirtualMachineInstance
     register: r_virtualmachineinstances
     retries: 30
@@ -89,17 +107,23 @@
     namespace: openshift-cnv
 
 - name: Delete SSP
+  when: _crd in _kubevirt_crds
+  vars:
+    _crd: ssps.ssp.kubevirt.io
   kubernetes.core.k8s:
     state: absent
-    api_version: ssp.kubevirt.io/v1beta1
+    api_version: "{{ _kubevirt_crds[_crd] }}"
     kind: SSP
     name: ssp-kubevirt-hyperconverged
     namespace: openshift-cnv
 
 - name: Delete Kubevirt
+  when: _crd in _kubevirt_crds
+  vars:
+    _crd: kubevirts.kubevirt.io
   kubernetes.core.k8s:
     state: absent
-    api_version: kubevirt.io/v1
+    api_version: "{{ _kubevirt_crds[_crd] }}"
     kind: KubeVirt
     name: kubevirt-kubevirt-hyperconverged
     namespace: openshift-cnv
