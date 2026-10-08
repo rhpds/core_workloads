@@ -31,14 +31,17 @@
   register: r_stackrox_cluster_rbac
 
 - name: Delete StackRox cluster scoped RBAC
-  when: "'stackrox' in item.1.metadata.name"
   kubernetes.core.k8s:
     state: absent
     api_version: rbac.authorization.k8s.io/v1
     kind: "{{ item.0.item }}"
     name: "{{ item.1.metadata.name }}"
     wait: true
-  loop: "{{ r_stackrox_cluster_rbac.results | subelements('resources') }}"
+  # Filter in the loop rather than with when, so the thousands of unrelated
+  # RBAC objects on the cluster do not each produce a skipped-item line.
+  loop: >-
+    {{ r_stackrox_cluster_rbac.results | subelements('resources')
+       | selectattr('1.metadata.name', 'search', 'stackrox') | list }}
   loop_control:
     label: "{{ item.0.item }}/{{ item.1.metadata.name }}"
 
@@ -52,7 +55,6 @@
   register: r_stackrox_namespaced_rbac
 
 - name: Delete StackRox namespaced RBAC
-  when: "'stackrox' in item.1.metadata.name"
   kubernetes.core.k8s:
     state: absent
     api_version: rbac.authorization.k8s.io/v1
@@ -60,7 +62,9 @@
     name: "{{ item.1.metadata.name }}"
     namespace: "{{ item.1.metadata.namespace }}"
     wait: true
-  loop: "{{ r_stackrox_namespaced_rbac.results | subelements('resources') }}"
+  loop: >-
+    {{ r_stackrox_namespaced_rbac.results | subelements('resources')
+       | selectattr('1.metadata.name', 'search', 'stackrox') | list }}
   loop_control:
     label: "{{ item.0.item }}/{{ item.1.metadata.namespace }}/{{ item.1.metadata.name }}"
 
@@ -100,15 +104,24 @@
   register: r_namespaces
 
 - name: Remove StackRox labels and annotations from namespaces
-  when: >-
-    'namespace.metadata.stackrox.io/id' in (item.metadata.labels | default({}))
-    or 'namespace.metadata.stackrox.io/name' in (item.metadata.labels | default({}))
-    or 'modified-by.stackrox.io/namespace-label-patcher' in (item.metadata.annotations | default({}))
+  vars:
+    _ns_by_id: >-
+      {{ r_namespaces.resources | selectattr('metadata.labels', 'defined')
+         | selectattr('metadata.labels', 'contains', 'namespace.metadata.stackrox.io/id')
+         | map(attribute='metadata.name') | list }}
+    _ns_by_name: >-
+      {{ r_namespaces.resources | selectattr('metadata.labels', 'defined')
+         | selectattr('metadata.labels', 'contains', 'namespace.metadata.stackrox.io/name')
+         | map(attribute='metadata.name') | list }}
+    _ns_by_annotation: >-
+      {{ r_namespaces.resources | selectattr('metadata.annotations', 'defined')
+         | selectattr('metadata.annotations', 'contains', 'modified-by.stackrox.io/namespace-label-patcher')
+         | map(attribute='metadata.name') | list }}
   kubernetes.core.k8s:
     state: patched
     api_version: v1
     kind: Namespace
-    name: "{{ item.metadata.name }}"
+    name: "{{ item }}"
     definition:
       metadata:
         labels:
@@ -116,9 +129,7 @@
           namespace.metadata.stackrox.io/name: null
         annotations:
           modified-by.stackrox.io/namespace-label-patcher: null
-  loop: "{{ r_namespaces.resources }}"
-  loop_control:
-    label: "{{ item.metadata.name }}"
+  loop: "{{ (_ns_by_id + _ns_by_name + _ns_by_annotation) | unique }}"
 
 - name: Remove Operator
   ansible.builtin.include_role:
