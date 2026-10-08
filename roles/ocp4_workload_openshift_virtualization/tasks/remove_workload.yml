@@ -2,7 +2,10 @@
 - name: Delete HyperConverged
   kubernetes.core.k8s:
     state: absent
-    definition: "{{ lookup('file', 'hyperconverged.yaml') }}"
+    api_version: hco.kubevirt.io/v1beta1
+    kind: HyperConverged
+    name: kubevirt-hyperconverged
+    namespace: openshift-cnv
 
 - name: Delete SSP
   kubernetes.core.k8s:
