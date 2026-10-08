@@ -1,4 +1,15 @@
 ---
+# The destroyer authenticates by exporting K8S_AUTH_HOST / K8S_AUTH_API_KEY
+# (see openshift_workload_destroyer/tasks/destroy_workload_on_cluster.yml).
+# Those are read by the kubernetes.core modules only - the oc CLI knows
+# nothing about them and looks for a kubeconfig that does not exist on the
+# destroy host, so every shell-out here failed with:
+#
+#   error: Missing or incomplete configuration info.
+#
+# Use the modules throughout instead, as install_operator already does for
+# label removal.
+
 - name: Remove stackrox namespace
   kubernetes.core.k8s:
     state: absent
@@ -10,22 +21,71 @@
   retries: 30
   delay: 5
 
-- name: Delete rbac
-  ansible.builtin.shell: >-
-    set -o pipefail &&
-    oc get clusterrole,clusterrolebinding,role,rolebinding,psp -o name
-    | grep stackrox | xargs oc delete --wait
-  changed_when: true
+- name: Find StackRox cluster scoped RBAC
+  kubernetes.core.k8s_info:
+    api_version: rbac.authorization.k8s.io/v1
+    kind: "{{ item }}"
+  loop:
+  - ClusterRole
+  - ClusterRoleBinding
+  register: r_stackrox_cluster_rbac
 
-- name: Delete scc
-  ansible.builtin.command: >-
-    oc delete scc -l "app.kubernetes.io/name=stackrox"
-  changed_when: true
+- name: Delete StackRox cluster scoped RBAC
+  when: "'stackrox' in item.1.metadata.name"
+  kubernetes.core.k8s:
+    state: absent
+    api_version: rbac.authorization.k8s.io/v1
+    kind: "{{ item.0.item }}"
+    name: "{{ item.1.metadata.name }}"
+    wait: true
+  loop: "{{ r_stackrox_cluster_rbac.results | subelements('resources') }}"
+  loop_control:
+    label: "{{ item.0.item }}/{{ item.1.metadata.name }}"
+
+- name: Find StackRox namespaced RBAC
+  kubernetes.core.k8s_info:
+    api_version: rbac.authorization.k8s.io/v1
+    kind: "{{ item }}"
+  loop:
+  - Role
+  - RoleBinding
+  register: r_stackrox_namespaced_rbac
+
+- name: Delete StackRox namespaced RBAC
+  when: "'stackrox' in item.1.metadata.name"
+  kubernetes.core.k8s:
+    state: absent
+    api_version: rbac.authorization.k8s.io/v1
+    kind: "{{ item.0.item }}"
+    name: "{{ item.1.metadata.name }}"
+    namespace: "{{ item.1.metadata.namespace }}"
+    wait: true
+  loop: "{{ r_stackrox_namespaced_rbac.results | subelements('resources') }}"
+  loop_control:
+    label: "{{ item.0.item }}/{{ item.1.metadata.namespace }}/{{ item.1.metadata.name }}"
+
+- name: Find StackRox SecurityContextConstraints
+  kubernetes.core.k8s_info:
+    api_version: security.openshift.io/v1
+    kind: SecurityContextConstraints
+    label_selectors:
+    - app.kubernetes.io/name=stackrox
+  register: r_stackrox_scc
+
+- name: Delete StackRox SecurityContextConstraints
+  kubernetes.core.k8s:
+    state: absent
+    api_version: security.openshift.io/v1
+    kind: SecurityContextConstraints
+    name: "{{ item.metadata.name }}"
+  loop: "{{ r_stackrox_scc.resources }}"
+  loop_control:
+    label: "{{ item.metadata.name }}"
 
 - name: Remove webhook
   kubernetes.core.k8s:
     state: absent
-    api_versionersion: admissionregistration.k8s.io/v1
+    api_version: admissionregistration.k8s.io/v1
     kind: ValidatingWebhookConfiguration
     name: stackrox
   register: r_k8s
@@ -33,16 +93,32 @@
   retries: 30
   delay: 5
 
-- name: Remove all labels from all namespaces
-  ansible.builtin.shell: # noqa: risky-shell-pipe
-    cmd: |
-      set -o pipefail
-      for namespace in $(oc get ns | tail -n +2 | awk '{print $1}'); do
-        oc label namespace $namespace namespace.metadata.stackrox.io/id-;
-        oc label namespace $namespace namespace.metadata.stackrox.io/name-;
-        oc annotate namespace $namespace modified-by.stackrox.io/namespace-label-patcher-;
-      done
-  changed_when: true
+- name: Find all namespaces
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Namespace
+  register: r_namespaces
+
+- name: Remove StackRox labels and annotations from namespaces
+  when: >-
+    'namespace.metadata.stackrox.io/id' in (item.metadata.labels | default({}))
+    or 'namespace.metadata.stackrox.io/name' in (item.metadata.labels | default({}))
+    or 'modified-by.stackrox.io/namespace-label-patcher' in (item.metadata.annotations | default({}))
+  kubernetes.core.k8s:
+    state: patched
+    api_version: v1
+    kind: Namespace
+    name: "{{ item.metadata.name }}"
+    definition:
+      metadata:
+        labels:
+          namespace.metadata.stackrox.io/id: null
+          namespace.metadata.stackrox.io/name: null
+        annotations:
+          modified-by.stackrox.io/namespace-label-patcher: null
+  loop: "{{ r_namespaces.resources }}"
+  loop_control:
+    label: "{{ item.metadata.name }}"
 
 - name: Remove Operator
   ansible.builtin.include_role:
