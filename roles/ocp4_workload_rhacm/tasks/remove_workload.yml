@@ -1,16 +1,89 @@
 ---
-- name: Remove RHACM MultiClusterHub
-  kubernetes.core.k8s:
-    state: absent
+# RHACM enforces a teardown order. Its validating webhook refuses to delete
+# the MultiClusterHub while any ManagedCluster still exists:
+#
+#   admission webhook "multiclusterhub.validating-webhook.open-cluster-management.io"
+#   denied the request: cannot delete MultiClusterHub resource because
+#   ManagedCluster resource(s) exist
+#
+# multiclusterhub.yaml.j2 never sets disableHubSelfManagement, so the hub
+# always imports itself as the local-cluster ManagedCluster and the webhook
+# always blocks. Turn self-management off first, otherwise the operator just
+# recreates local-cluster after it is detached.
+
+- name: Look up the MultiClusterHub
+  kubernetes.core.k8s_info:
     api_version: operator.open-cluster-management.io/v1
     kind: MultiClusterHub
     name: multiclusterhub
     namespace: open-cluster-management
-    wait: true
-    # MultiClusterHub removal cascades through MCE and its components before
-    # the operator drops the finalizer. The module default of 120s is far too
-    # short. Matches ocp_workload_rhacm_hcp.
-    wait_timeout: 1800
+  register: r_multiclusterhub
+
+- name: Tear down the RHACM hub
+  when: r_multiclusterhub.resources | length > 0
+  block:
+  - name: Stop the hub from importing itself as local-cluster
+    kubernetes.core.k8s:
+      state: patched
+      api_version: operator.open-cluster-management.io/v1
+      kind: MultiClusterHub
+      name: multiclusterhub
+      namespace: open-cluster-management
+      definition:
+        spec:
+          disableHubSelfManagement: true
+
+  - name: Look up the ManagedCluster CRD
+    kubernetes.core.k8s_info:
+      api_version: apiextensions.k8s.io/v1
+      kind: CustomResourceDefinition
+      name: managedclusters.cluster.open-cluster-management.io
+    register: r_managedcluster_crd
+
+  - name: Detach all ManagedClusters
+    when: r_managedcluster_crd.resources | length > 0
+    block:
+    - name: Find all ManagedClusters
+      kubernetes.core.k8s_info:
+        api_version: cluster.open-cluster-management.io/v1
+        kind: ManagedCluster
+      register: r_managed_clusters
+
+    - name: Remove ManagedClusters, local-cluster last
+      kubernetes.core.k8s:
+        state: absent
+        api_version: cluster.open-cluster-management.io/v1
+        kind: ManagedCluster
+        name: "{{ item }}"
+        wait: true
+        wait_timeout: 900
+      loop: "{{ _imported + _local }}"
+      vars:
+        _names: "{{ r_managed_clusters.resources | map(attribute='metadata.name') | list }}"
+        _imported: "{{ _names | reject('equalto', 'local-cluster') | list }}"
+        _local: "{{ _names | select('equalto', 'local-cluster') | list }}"
+
+    - name: Wait until no ManagedClusters remain
+      kubernetes.core.k8s_info:
+        api_version: cluster.open-cluster-management.io/v1
+        kind: ManagedCluster
+      register: r_managed_clusters
+      retries: 60
+      delay: 10
+      until: r_managed_clusters.resources | length == 0
+
+  - name: Remove RHACM MultiClusterHub
+    kubernetes.core.k8s:
+      state: absent
+      api_version: operator.open-cluster-management.io/v1
+      kind: MultiClusterHub
+      name: multiclusterhub
+      namespace: open-cluster-management
+      wait: true
+      # MultiClusterHub removal cascades through MCE and its components before
+      # the operator drops the finalizer. The module default of 120s is far too
+      # short. Matches ocp_workload_rhacm_hcp.
+      wait_timeout: 1800
 
 - name: Wait until ocm-controller has been terminated
   kubernetes.core.k8s_info:
