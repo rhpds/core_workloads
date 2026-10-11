@@ -1,0 +1,24 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: {{ ocp4_workload_field_content_deployed_project }}
+  namespace: {{ ocp4_workload_field_content_namespace }}
+  labels:
+    demo.redhat.com/application: "field-content"
+    app.kubernetes.io/managed-by: agnosticd
+spec:
+  description: >-
+    Child Applications created when a catalog (or BYO) demo is synced.
+    Catalog tiles stay in the default project.
+  sourceRepos:
+    - '*'
+  destinations:
+    - namespace: '*'
+      server: '*'
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'
