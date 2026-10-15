@@ -45,124 +45,23 @@
   loop_control:
     label: "{{ item.item }}"
 
+# VirtualMachines have to be gone before we touch VirtualMachineInstances,
+# not merely deleted: a VirtualMachine that is still around owns its VMI and
+# will happily recreate one the moment we delete it. That is why this step
+# forces stragglers out rather than moving on and hoping.
 - name: Delete all VirtualMachines
   when: "'virtualmachines.kubevirt.io' in _kubevirt_crds"
-  block:
-  - name: Find all VirtualMachines
-    kubernetes.core.k8s_info:
-      api_version: "{{ _kubevirt_crds['virtualmachines.kubevirt.io'] }}"
-      kind: VirtualMachine
-    register: r_virtualmachines
-
-  - name: Remove all VirtualMachines
-    kubernetes.core.k8s:
-      state: absent
-      api_version: "{{ _kubevirt_crds['virtualmachines.kubevirt.io'] }}"
-      kind: VirtualMachine
-      name: "{{ item.metadata.name }}"
-      namespace: "{{ item.metadata.namespace }}"
-      wait: true
-      wait_timeout: 300
-    loop: "{{ r_virtualmachines.resources }}"
-    loop_control:
-      label: "{{ item.metadata.namespace }}/{{ item.metadata.name }}"
+  ansible.builtin.include_tasks: force_remove_kubevirt_kind.yml
+  vars:
+    _fr_api_version: "{{ _kubevirt_crds['virtualmachines.kubevirt.io'] }}"
+    _fr_kind: VirtualMachine
 
 - name: Delete any remaining VirtualMachineInstances
   when: "'virtualmachineinstances.kubevirt.io' in _kubevirt_crds"
-  block:
-  - name: Find remaining VirtualMachineInstances
-    kubernetes.core.k8s_info:
-      api_version: "{{ _kubevirt_crds['virtualmachineinstances.kubevirt.io'] }}"
-      kind: VirtualMachineInstance
-    register: r_virtualmachineinstances
-
-  - name: Remove remaining VirtualMachineInstances
-    kubernetes.core.k8s:
-      state: absent
-      api_version: "{{ _kubevirt_crds['virtualmachineinstances.kubevirt.io'] }}"
-      kind: VirtualMachineInstance
-      name: "{{ item.metadata.name }}"
-      namespace: "{{ item.metadata.namespace }}"
-      wait: true
-      wait_timeout: 300
-    loop: "{{ r_virtualmachineinstances.resources }}"
-    loop_control:
-      label: "{{ item.metadata.namespace }}/{{ item.metadata.name }}"
-
-  - name: Wait until no VirtualMachineInstances remain
-    kubernetes.core.k8s_info:
-      api_version: "{{ _kubevirt_crds['virtualmachineinstances.kubevirt.io'] }}"
-      kind: VirtualMachineInstance
-    register: r_virtualmachineinstances
-    retries: 30
-    delay: 10
-    until: r_virtualmachineinstances.resources | length == 0
-    ignore_errors: true
-
-  # A VMI still here after five minutes is not leaving on its own. It is
-  # holding the kubevirt.io/virtualMachineControllerFinalize finalizer and
-  # whatever was meant to clear it - virt-handler, or the virt-launcher pod it
-  # watches - is already gone or wedged, so the object sits in Terminating and
-  # keeps the validating webhook blocking the uninstall indefinitely.
-  #
-  # Destroy has no state worth preserving and the whole operator comes down a
-  # few tasks from now, so stop being polite: drop the grace period, then clear
-  # the finalizers so the API server can reap the object with nobody to ack it.
-  - name: Force out VirtualMachineInstances that would not terminate
-    when: r_virtualmachineinstances.resources | default([]) | length > 0
-    vars:
-      _vmi_api: "{{ _kubevirt_crds['virtualmachineinstances.kubevirt.io'] }}"
-    block:
-    - name: Report the VirtualMachineInstances being forced out
-      ansible.builtin.debug:
-        msg: >-
-          {{ item.metadata.namespace }}/{{ item.metadata.name }} stuck in
-          {{ item.status.phase | default('unknown') }} with finalizers
-          {{ item.metadata.finalizers | default([]) | join(',') | default('none', true) }}
-      loop: "{{ r_virtualmachineinstances.resources }}"
-      loop_control:
-        label: "{{ item.metadata.namespace }}/{{ item.metadata.name }}"
-
-    - name: Delete stuck VirtualMachineInstances with no grace period
-      kubernetes.core.k8s:
-        state: absent
-        api_version: "{{ _vmi_api }}"
-        kind: VirtualMachineInstance
-        name: "{{ item.metadata.name }}"
-        namespace: "{{ item.metadata.namespace }}"
-        delete_options:
-          gracePeriodSeconds: 0
-      loop: "{{ r_virtualmachineinstances.resources }}"
-      loop_control:
-        label: "{{ item.metadata.namespace }}/{{ item.metadata.name }}"
-      failed_when: false
-
-    # Patching an object that the previous task finally managed to reap is a
-    # 404, not a problem, hence failed_when: false here too.
-    - name: Strip finalizers from stuck VirtualMachineInstances
-      kubernetes.core.k8s:
-        state: patched
-        merge_type: merge
-        api_version: "{{ _vmi_api }}"
-        kind: VirtualMachineInstance
-        name: "{{ item.metadata.name }}"
-        namespace: "{{ item.metadata.namespace }}"
-        definition:
-          metadata:
-            finalizers: []
-      loop: "{{ r_virtualmachineinstances.resources }}"
-      loop_control:
-        label: "{{ item.metadata.namespace }}/{{ item.metadata.name }}"
-      failed_when: false
-
-    - name: Confirm the forced VirtualMachineInstances are gone
-      kubernetes.core.k8s_info:
-        api_version: "{{ _vmi_api }}"
-        kind: VirtualMachineInstance
-      register: r_forced_virtualmachineinstances
-      retries: 12
-      delay: 5
-      until: r_forced_virtualmachineinstances.resources | length == 0
+  ansible.builtin.include_tasks: force_remove_kubevirt_kind.yml
+  vars:
+    _fr_api_version: "{{ _kubevirt_crds['virtualmachineinstances.kubevirt.io'] }}"
+    _fr_kind: VirtualMachineInstance
 
 - name: Delete HyperConverged
   kubernetes.core.k8s:

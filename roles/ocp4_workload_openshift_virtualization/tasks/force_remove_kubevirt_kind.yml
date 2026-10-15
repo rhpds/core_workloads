@@ -1,0 +1,108 @@
+---
+# Remove every object of one KubeVirt kind, cluster-wide, without letting a
+# slow or wedged object stall the destroy.
+#
+# Callers set:
+#   _fr_api_version  API version to address the kind with, from _kubevirt_crds
+#   _fr_kind         VirtualMachine or VirtualMachineInstance
+#
+# Deletes are issued with wait: false on purpose. kubernetes.core.k8s applies
+# wait_timeout *per loop item*, so a serial `wait: true` loop costs up to
+# wait_timeout x (number of objects) - a handful of VMs is enough to blow the
+# job's time budget waiting on deletions that the API server is perfectly
+# happy to process concurrently. Fire all the deletes, then converge once.
+#
+# Whatever is still standing after that convergence is not leaving on its own.
+# It is holding a finalizer - kubevirt.io/virtualMachineControllerFinalize for
+# a VMI - and whatever was meant to clear it is gone or wedged, so the object
+# sits in Terminating forever and the kubevirt-validator webhook keeps
+# rejecting the uninstall. Destroy has no state worth preserving and the whole
+# operator comes down shortly after, so stop being polite: drop the grace
+# period, then clear the finalizers so the API server can reap the object with
+# nobody left to acknowledge the deletion.
+
+- name: Find all {{ _fr_kind }}s
+  kubernetes.core.k8s_info:
+    api_version: "{{ _fr_api_version }}"
+    kind: "{{ _fr_kind }}"
+  register: r_fr_found
+
+- name: Remove all {{ _fr_kind }}s
+  kubernetes.core.k8s:
+    state: absent
+    api_version: "{{ _fr_api_version }}"
+    kind: "{{ _fr_kind }}"
+    name: "{{ item.metadata.name }}"
+    namespace: "{{ item.metadata.namespace }}"
+    wait: false
+  loop: "{{ r_fr_found.resources }}"
+  loop_control:
+    label: "{{ item.metadata.namespace }}/{{ item.metadata.name }}"
+
+# Deliberately not gated on anything having been found: with nothing left the
+# until condition is true on the first attempt, which costs one API call and
+# keeps r_fr_remaining defined for the block below.
+- name: Wait until no {{ _fr_kind }}s remain
+  kubernetes.core.k8s_info:
+    api_version: "{{ _fr_api_version }}"
+    kind: "{{ _fr_kind }}"
+  register: r_fr_remaining
+  retries: 30
+  delay: 10
+  until: r_fr_remaining.resources | length == 0
+  ignore_errors: true
+
+- name: Force out {{ _fr_kind }}s that would not terminate
+  when: r_fr_remaining.resources | default([]) | length > 0
+  block:
+  - name: Report the {{ _fr_kind }}s being forced out
+    ansible.builtin.debug:
+      msg: >-
+        {{ item.metadata.namespace }}/{{ item.metadata.name }} stuck in
+        {{ item.status.phase | default('unknown') }} with finalizers
+        {{ item.metadata.finalizers | default([]) | join(',') | default('none', true) }}
+    loop: "{{ r_fr_remaining.resources }}"
+    loop_control:
+      label: "{{ item.metadata.namespace }}/{{ item.metadata.name }}"
+
+  - name: Delete stuck {{ _fr_kind }}s with no grace period
+    kubernetes.core.k8s:
+      state: absent
+      api_version: "{{ _fr_api_version }}"
+      kind: "{{ _fr_kind }}"
+      name: "{{ item.metadata.name }}"
+      namespace: "{{ item.metadata.namespace }}"
+      wait: false
+      delete_options:
+        gracePeriodSeconds: 0
+    loop: "{{ r_fr_remaining.resources }}"
+    loop_control:
+      label: "{{ item.metadata.namespace }}/{{ item.metadata.name }}"
+    failed_when: false
+
+  # Patching an object that the previous task finally managed to reap is a
+  # 404, not a problem, hence failed_when: false here too.
+  - name: Strip finalizers from stuck {{ _fr_kind }}s
+    kubernetes.core.k8s:
+      state: patched
+      merge_type: merge
+      api_version: "{{ _fr_api_version }}"
+      kind: "{{ _fr_kind }}"
+      name: "{{ item.metadata.name }}"
+      namespace: "{{ item.metadata.namespace }}"
+      definition:
+        metadata:
+          finalizers: []
+    loop: "{{ r_fr_remaining.resources }}"
+    loop_control:
+      label: "{{ item.metadata.namespace }}/{{ item.metadata.name }}"
+    failed_when: false
+
+  - name: Confirm the forced {{ _fr_kind }}s are gone
+    kubernetes.core.k8s_info:
+      api_version: "{{ _fr_api_version }}"
+      kind: "{{ _fr_kind }}"
+    register: r_fr_forced
+    retries: 12
+    delay: 5
+    until: r_fr_forced.resources | length == 0
