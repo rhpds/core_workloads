@@ -167,6 +167,21 @@
         type: Available
     register: r_backingstore
 
+# k8s_info can return resources: [] without failing even with wait: true.
+# In particular, recovery must not succeed when the BackingStore is still absent.
+- name: Verify the default BackingStore is present and available
+  ansible.builtin.assert:
+    that:
+    - r_backingstore.resources | default([]) | length == 1
+    - >-
+      r_backingstore.resources[0].status.conditions | default([])
+      | selectattr('type', 'equalto', 'Available')
+      | selectattr('status', 'equalto', 'True') | list | length > 0
+    fail_msg: >-
+      The default NooBaa BackingStore is missing or unavailable after reconciliation.
+      Inspect NooBaa status and operator bootstrap logs in
+      {{ ocp4_workload_external_odf_operator_namespace }} before retrying deployment.
+
 - name: Change BackingStore numVolumes in pvPool
   kubernetes.core.k8s:
     state: patched
