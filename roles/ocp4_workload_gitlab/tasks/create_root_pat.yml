@@ -33,7 +33,7 @@
       token.save!;
       puts token.token"
   register: r_create_pat
-  retries: 3
+  retries: 30
   delay: 10
 
 - name: Set automation token from gitlab-rails output
