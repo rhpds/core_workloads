@@ -91,10 +91,13 @@
   - name: Inject AAP2 Controller manifest
     ansible.controller.license:
       manifest: /tmp/aap-manifest.zip
-      controller_host: "{{ automation_controller_hostname }}"
+      controller_host: >-
+        {{ ocp4_workload_ansible_automation_platform_manifest_inject_host
+           if ocp4_workload_ansible_automation_platform_manifest_inject_host | default('') | length > 0
+           else automation_controller_hostname }}
       controller_username: admin
       controller_password: "{{ _ocp4_workload_ansible_automation_platform_admin_password }}"
-      validate_certs: true
+      validate_certs: "{{ ocp4_workload_ansible_automation_platform_manifest_inject_validate_certs }}"
     register: r_aap_license
     until: not r_aap_license.failed
     retries: "{{ ocp4_workload_ansible_automation_platform_manifest_inject_retries }}"
