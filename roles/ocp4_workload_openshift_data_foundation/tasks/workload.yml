@@ -136,6 +136,66 @@
   delay: 5
   until: r_storagecluster is success
 
+# ===================================================================
+# Handle AWS Credentials for NooBaa (conditionally)
+# ===================================================================
+- name: Setup NooBaa AWS credentials via Cloud Credential Operator
+  when:
+  - ocp4_workload_openshift_data_foundation_aws_access_key_id is defined
+  - ocp4_workload_openshift_data_foundation_aws_access_key_id != ""
+  - ocp4_workload_openshift_data_foundation_aws_secret_access_key is defined
+  - ocp4_workload_openshift_data_foundation_aws_secret_access_key != ""
+  block:
+
+  - name: Create temporary aws-creds in kube-system for Cloud Credential Operator
+    kubernetes.core.k8s:
+      state: present
+      template: aws-creds.yaml.j2
+
+  - name: Wait for NooBaa CredentialsRequest to be created
+    kubernetes.core.k8s_info:
+      api_version: cloudcredential.openshift.io/v1
+      kind: CredentialsRequest
+      name: noobaa-aws-cloud-creds
+      namespace: openshift-storage
+    register: r_noobaa_credreq
+    retries: 60
+    delay: 10
+    until:
+    - r_noobaa_credreq.resources is defined
+    - r_noobaa_credreq.resources | length > 0
+
+  - name: Wait for Cloud Credential Operator to provision NooBaa credentials
+    kubernetes.core.k8s_info:
+      api_version: cloudcredential.openshift.io/v1
+      kind: CredentialsRequest
+      name: noobaa-aws-cloud-creds
+      namespace: openshift-storage
+    register: r_noobaa_creds_status
+    retries: 30
+    delay: 10
+    until:
+    - r_noobaa_creds_status.resources is defined
+    - r_noobaa_creds_status.resources | length > 0
+    - r_noobaa_creds_status.resources[0].status.provisioned | default(false) | bool
+
+  - name: Verify NooBaa AWS credentials secret was created
+    kubernetes.core.k8s_info:
+      api_version: v1
+      kind: Secret
+      name: noobaa-aws-cloud-creds-secret
+      namespace: openshift-storage
+    register: r_noobaa_secret
+    failed_when: r_noobaa_secret.resources | length == 0
+
+  - name: Remove temporary aws-creds from kube-system
+    kubernetes.core.k8s:
+      state: absent
+      api_version: v1
+      kind: Secret
+      name: aws-creds
+      namespace: kube-system
+
 - name: Wait for ODF Storage Cluster to finish deploying
   kubernetes.core.k8s_info:
     api_version: ocs.openshift.io/v1

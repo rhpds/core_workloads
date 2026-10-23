@@ -1,0 +1,10 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: aws-creds
+  namespace: kube-system
+type: Opaque
+stringData:
+  aws_access_key_id: {{ ocp4_workload_openshift_data_foundation_aws_access_key_id }}
+  aws_secret_access_key: {{ ocp4_workload_openshift_data_foundation_aws_secret_access_key }}
