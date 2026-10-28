@@ -37,3 +37,21 @@ ocp4_workload_openshift_data_foundation_tolerations: []
 # Add a node selector to be more selective about nodes
 # --------------------------------
 # ocp4_workload_openshift_data_foundation_add_selector: "beta.kubernetes.io/instance-type=i3.metal"
+
+# --------------------------------
+# NooBaa BackingStore Configuration
+# --------------------------------
+# Automatically configure BackingStore resources to prevent OOM issues
+# Set to false to use operator defaults (400Mi memory - may cause OOMKills with large images)
+ocp4_workload_openshift_data_foundation_backingstore_custom_resources: true
+
+# BackingStore pod resources (the storage pod that handles S3 uploads)
+# These values prevent OOMKills during large container image pushes to Quay
+ocp4_workload_openshift_data_foundation_backingstore_cpu_limits: 1000m
+ocp4_workload_openshift_data_foundation_backingstore_cpu_requests: 500m
+ocp4_workload_openshift_data_foundation_backingstore_memory_limits: 4Gi
+ocp4_workload_openshift_data_foundation_backingstore_memory_requests: 2Gi
+ocp4_workload_openshift_data_foundation_backingstore_storage_requests: 50Gi
+
+# Timeout for BackingStore to become available
+ocp4_workload_openshift_data_foundation_noobaa_deploy_timeout: 600
