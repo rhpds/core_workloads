@@ -150,6 +150,55 @@
     wait_sleep: 10
     wait_timeout: "{{ ocp4_workload_openshift_data_foundation_ceph_storage_cluster_deploy_timeout }}"
 
+# Configure NooBaa BackingStore with adequate resources
+# Default operator values (400Mi memory) cause OOMKills during large image uploads
+- name: Configure NooBaa BackingStore resources
+  when: ocp4_workload_openshift_data_foundation_backingstore_custom_resources | default(true) | bool
+  block:
+  - name: Wait until BackingStore exists
+    kubernetes.core.k8s_info:
+      api_version: noobaa.io/v1alpha1
+      kind: BackingStore
+      name: noobaa-default-backing-store
+      namespace: openshift-storage
+    register: r_backingstore_exists
+    until: r_backingstore_exists.resources | default([]) | length > 0
+    retries: 30
+    delay: 10
+
+  - name: Wait until BackingStore is available
+    kubernetes.core.k8s_info:
+      api_version: noobaa.io/v1alpha1
+      kind: BackingStore
+      name: noobaa-default-backing-store
+      namespace: openshift-storage
+      wait: true
+      wait_sleep: 10
+      wait_timeout: "{{ ocp4_workload_openshift_data_foundation_noobaa_deploy_timeout }}"
+      wait_condition:
+        reason: "Backing store mode: OPTIMAL"
+        status: "True"
+        type: Available
+
+  - name: Patch BackingStore with production resource limits
+    kubernetes.core.k8s:
+      state: patched
+      api_version: noobaa.io/v1alpha1
+      kind: BackingStore
+      name: noobaa-default-backing-store
+      namespace: openshift-storage
+      definition:
+        spec:
+          pvPool:
+            resources:
+              limits:
+                cpu: "{{ ocp4_workload_openshift_data_foundation_backingstore_cpu_limits }}"
+                memory: "{{ ocp4_workload_openshift_data_foundation_backingstore_memory_limits }}"
+              requests:
+                cpu: "{{ ocp4_workload_openshift_data_foundation_backingstore_cpu_requests }}"
+                memory: "{{ ocp4_workload_openshift_data_foundation_backingstore_memory_requests }}"
+                storage: "{{ ocp4_workload_openshift_data_foundation_backingstore_storage_requests }}"
+
 - name: Update Tolerations for CSI DaemonSets
   when: ocp4_workload_openshift_data_foundation_tolerations | length > 0
   block:
