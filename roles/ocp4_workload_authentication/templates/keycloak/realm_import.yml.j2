@@ -10,7 +10,7 @@ spec:
     realm: {{ ocp4_workload_authentication_keycloak_default_realm }}
     enabled: true
     sslRequired: external
-    registrationAllowed: true
+    registrationAllowed: {{ ocp4_workload_authentication_keycloak_enable_self_registration | bool | lower }}
     loginWithEmailAllowed: true
     duplicateEmailsAllowed: false
     clients:

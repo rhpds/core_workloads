@@ -111,6 +111,8 @@ ocp4_workload_authentication_keycloak_pgsql_user: keycloak
 ocp4_workload_authentication_keycloak_pgsql_password: ""
 
 ocp4_workload_authentication_keycloak_default_realm: sso
+# Allow users to register accounts in the Keycloak realm.
+ocp4_workload_authentication_keycloak_enable_self_registration: false
 ocp4_workload_authentication_keycloak_openshift_client_secret: ""
 ocp4_workload_authentication_keycloak_openshift_client_id: idp-4-ocp
 
