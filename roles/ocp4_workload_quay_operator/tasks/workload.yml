@@ -104,7 +104,7 @@
         _ocp4_workload_quay_operator_seaweedfs_secret_key: >-
           {{ r_seaweedfs_credentials.resources[0].data.secret_key | b64decode }}
 
-  - name: Check Noobaa BucketClass exists
+  - name: Wait for Noobaa BucketClass to exist
     when: >-
       not (ocp4_workload_quay_operator_s4_storage_enabled | bool)
       and not (ocp4_workload_quay_operator_garage_storage_enabled | bool)
@@ -114,16 +114,9 @@
       kind: BucketClass
       namespace: openshift-storage
     register: r_bucket_class
-
-  - name: Assert that Noobaa BucketClass exists
-    when: >-
-      not (ocp4_workload_quay_operator_s4_storage_enabled | bool)
-      and not (ocp4_workload_quay_operator_garage_storage_enabled | bool)
-      and not (ocp4_workload_quay_operator_seaweedfs_storage_enabled | bool)
-    ansible.builtin.assert:
-      that:
-      - r_bucket_class.resources | length == 1
-      fail_msg: "Quay must be installed on a cluster with OpenShift Container Storage configured - and a Bucket Class deployed."
+    until: r_bucket_class.resources | length > 0
+    retries: 120
+    delay: 10
 
 - name: Install Quay Operator
   when: ocp4_workload_quay_operator_install_operator | bool
