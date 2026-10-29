@@ -163,7 +163,7 @@
       namespace: openshift-storage
     register: r_backingstore_exists
     until: r_backingstore_exists.resources | default([]) | length > 0
-    retries: 30
+    retries: 180
     delay: 10
 
   - name: Wait until BackingStore is available
