@@ -106,6 +106,20 @@
 # ===================================================================
 # Deploy via ArgoCD
 # ===================================================================
+# The GitOps operator creates the default AppProject some seconds after
+# the ArgoCD instance. An Application created before that gets an
+# InvalidSpecError, which the repository check below reports as a warning.
+- name: Wait for the default ArgoCD AppProject
+  kubernetes.core.k8s_info:
+    api_version: argoproj.io/v1alpha1
+    kind: AppProject
+    name: default
+    namespace: "{{ ocp4_workload_field_content_namespace }}"
+  register: r_field_content_appproject
+  retries: 30
+  delay: 10
+  until: r_field_content_appproject.resources | length > 0
+
 - name: Create field content ArgoCD application
   kubernetes.core.k8s:
     state: present
