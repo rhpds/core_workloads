@@ -123,3 +123,38 @@
   until:
     - argocd_field_content.resources | length > 0
   failed_when: argocd_field_content.resources | length == 0
+
+# ===================================================================
+# Quick check that ArgoCD can read and render the repository.
+# Does not wait for sync or health. Errors are reported as a warning
+# in user info and do not fail the provision.
+# ===================================================================
+- name: Check that ArgoCD can read the field content repository
+  kubernetes.core.k8s_info:
+    api_version: argoproj.io/v1alpha1
+    kind: Application
+    name: field-content
+    namespace: "{{ ocp4_workload_field_content_namespace }}"
+  register: r_field_content_app
+  retries: "{{ ocp4_workload_field_content_repo_check_retries | int }}"
+  delay: "{{ ocp4_workload_field_content_repo_check_delay | int }}"
+  until: >-
+    (r_field_content_app.resources[0].status.conditions | default([])
+     | selectattr('type', 'in', _ocp4_workload_field_content_repo_error_types) | list | length > 0)
+    or
+    (r_field_content_app.resources[0].status.sync.status | default('Unknown')
+     in ['Synced', 'OutOfSync'])
+  failed_when: false
+
+- name: Report ArgoCD repository error
+  vars:
+    _repo_errors: >-
+      {{ r_field_content_app.resources[0].status.conditions | default([])
+         | selectattr('type', 'in', _ocp4_workload_field_content_repo_error_types) | list }}
+  when: _repo_errors | length > 0
+  agnosticd.core.agnosticd_user_info:
+    msg: >-
+      WARNING: ArgoCD cannot deploy the field content repository
+      {{ ocp4_workload_field_content_gitops_repo_url }}
+      ({{ ocp4_workload_field_content_gitops_repo_revision }}):
+      {{ _repo_errors | map(attribute='message') | join('; ') | truncate(1000) }}
