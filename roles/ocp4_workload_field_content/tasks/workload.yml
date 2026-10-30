@@ -124,6 +124,13 @@
     - argocd_field_content.resources | length > 0
   failed_when: argocd_field_content.resources | length == 0
 
+- name: Save field content repository details to user data
+  agnosticd.core.agnosticd_user_info:
+    data:
+      field_content_gitops_repo_url: "{{ ocp4_workload_field_content_gitops_repo_url }}"
+      field_content_gitops_repo_revision: "{{ ocp4_workload_field_content_gitops_repo_revision }}"
+      field_content_argocd_app_namespace: "{{ ocp4_workload_field_content_namespace }}"
+
 # ===================================================================
 # Quick check that ArgoCD can read and render the repository.
 # Does not wait for sync or health. Errors are reported as a warning
