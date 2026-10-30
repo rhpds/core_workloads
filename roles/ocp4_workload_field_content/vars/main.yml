@@ -1,2 +1,8 @@
 ---
 _ocp4_workload_gitops_bootstrap_deployer_values: ""
+
+# ArgoCD Application condition types that mean the repository cannot be
+# read or rendered
+_ocp4_workload_field_content_repo_error_types:
+  - ComparisonError
+  - InvalidSpecError
