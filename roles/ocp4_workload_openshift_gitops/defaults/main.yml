@@ -51,6 +51,14 @@ ocp4_workload_openshift_gitops_controller_limits_memory: 2Gi
 # Reduce this value if you want to sync more frequently
 ocp4_workload_openshift_gitops_controller_app_sync: 3m
 
+# Optional command parameters for the ArgoCD custom resource (spec.cmdParams).
+# Requires an OpenShift GitOps version that supports spec.cmdParams.
+# Values must be strings. Empty leaves the operator's defaults unchanged.
+ocp4_workload_openshift_gitops_cmd_params: {}
+# Example: keep per-resource health in Redis instead of the Application CR.
+# ocp4_workload_openshift_gitops_cmd_params:
+#   controller.resource.health.persist: "false"
+
 # Redis
 ocp4_workload_openshift_gitops_redis_update: false
 ocp4_workload_openshift_gitops_redis_requests_cpu: 250m
