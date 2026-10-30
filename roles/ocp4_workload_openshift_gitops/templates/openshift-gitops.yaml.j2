@@ -6,6 +6,10 @@ metadata:
   namespace: openshift-gitops
 spec:
   kustomizeBuildOptions: "--enable-helm --enable-alpha-plugins"
+{% if ocp4_workload_openshift_gitops_cmd_params | length > 0 %}
+  cmdParams:
+    {{ ocp4_workload_openshift_gitops_cmd_params | to_nice_yaml | indent(4) }}
+{% endif %}
 {% if ocp4_workload_openshift_gitops_resource_tracking_method | length > 0 %}
   resourceTrackingMethod: {{ ocp4_workload_openshift_gitops_resource_tracking_method }}
 {% endif %}
