@@ -3,3 +3,28 @@
 == Role overview
 
 This role installs Red Hat OpenShift Dev Spaces into an OpenShift Cluster.
+
+== Concurrent workspaces and storage
+
+The role defaults to two saved workspaces and one running workspace. Storage is
+left unspecified, preserving the existing configuration or the Dev Spaces
+operator's `per-user` default. To run two workspaces at the same time with independent
+persistent volumes, set:
+
+[source,yaml]
+----
+ocp4_workload_devspaces_max_number_of_workspaces: 2
+ocp4_workload_devspaces_max_number_of_running_workspaces: 2
+ocp4_workload_devspaces_pvc_strategy: per-workspace
+----
+
+`ocp4_workload_devspaces_pvc_strategy` accepts an empty string (the default),
+`per-user`, `per-workspace`, or `ephemeral`. With ReadWriteOnce volumes,
+concurrent workspaces sharing a per-user
+volume can encounter attachment failures when scheduled on different nodes.
+Use `per-workspace` to give each workspace its own persistent volume. `ephemeral`
+storage does not preserve local changes when a workspace stops.
+
+The storage default applies to newly created workspaces. Changing it does not
+migrate existing workspace files or PVCs; back up local work before recreating
+an existing workspace with a different storage strategy.
