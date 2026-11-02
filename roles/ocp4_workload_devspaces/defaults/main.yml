@@ -12,6 +12,11 @@ ocp4_workload_devspaces_namespace: openshift-devspaces
 ocp4_workload_devspaces_max_number_of_workspaces: 2
 ocp4_workload_devspaces_max_number_of_running_workspaces: 1
 
+# Optional storage strategy: per-user, per-workspace, or ephemeral.
+# Leave empty to retain the operator default or existing cluster configuration.
+# Independent per-workspace volumes support concurrent workspaces on RWO storage.
+ocp4_workload_devspaces_pvc_strategy: ""
+
 ocp4_workload_devspaces_setup_devworkspaces: false
 ocp4_workload_devspaces_devworkspace_devfile: >-
   http://devspaces-dashboard.openshift-devspaces.svc.cluster.local:8080/dashboard/api/editors/devfile?che-editor=che-incubator/che-code/latest

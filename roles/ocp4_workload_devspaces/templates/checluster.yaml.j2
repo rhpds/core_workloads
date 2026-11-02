@@ -23,3 +23,7 @@ spec:
     secondsOfInactivityBeforeIdling: -1
     maxNumberOfWorkspacesPerUser: {{ ocp4_workload_devspaces_max_number_of_workspaces }}
     maxNumberOfRunningWorkspacesPerUser: {{ ocp4_workload_devspaces_max_number_of_running_workspaces }}
+{% if ocp4_workload_devspaces_pvc_strategy | length > 0 %}
+    storage:
+      pvcStrategy: {{ ocp4_workload_devspaces_pvc_strategy }}
+{% endif %}
