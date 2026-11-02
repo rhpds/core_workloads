@@ -56,6 +56,9 @@ ocp4_workload_openshift_gitops_controller_app_sync: 3m
 # Values must be strings. Empty leaves the operator's defaults unchanged.
 ocp4_workload_openshift_gitops_cmd_params: {}
 # Example: keep per-resource health in Redis instead of the Application CR.
+# Upstream Argo CD 3.x defaults to false; OpenShift GitOps retains true for compatibility.
+# Do not use this example if RHACM is in use, or other integrations require
+# per-resource health in Application CR status.
 # ocp4_workload_openshift_gitops_cmd_params:
 #   controller.resource.health.persist: "false"
 
