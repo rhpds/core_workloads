@@ -1,6 +1,4 @@
 ---
-
-
 - name: Set DNS facts for enabled certificate targets
   ansible.builtin.set_fact:
     _ocp4_workload_cert_manager_api_hostname: >-
@@ -8,11 +6,9 @@
     _ocp4_workload_cert_manager_wildcard_domain: >-
       {{ openshift_cluster_ingress_domain if ocp4_workload_cert_manager_install_ingress_certificates | bool else '' }}
 
-
 - name: Validate Azure DNS inputs before installing the operator
   when: ocp4_workload_cert_manager_cloud_provider == 'azure'
   ansible.builtin.include_tasks: validate_azure.yml
-
 
 - name: Install Red Hat Cert Manager operator
   ansible.builtin.include_role:
@@ -34,7 +30,6 @@
     install_operator_catalogsource_image: "{{ ocp4_workload_cert_manager_catalog_snapshot_image | default('') }}"
     install_operator_catalogsource_image_tag: "{{ ocp4_workload_cert_manager_catalog_snapshot_image_tag | default('') }}"
 
-
 - name: Update CertManager for AWS/GCP/Azure to use external DNS
   when: >
     ocp4_workload_cert_manager_cloud_provider in ["aws", "gcp", "azure", "acme-bifrost"]
@@ -42,13 +37,11 @@
     state: present
     template: certmanager.yaml.j2
 
-
 - name: Print API and wildcard domain
   ansible.builtin.debug:
     msg: >-
       API: {{ _ocp4_workload_cert_manager_api_hostname }},
       Wildcard Domain: *.{{ _ocp4_workload_cert_manager_wildcard_domain }}
-
 
 - name: Wait until CertManager is ready
   kubernetes.core.k8s_info:
@@ -63,17 +56,14 @@
       status: "True"
   register: r_cert_manager
 
-
 - name: Create ZeroSSL credentials secret for cert manager
   when: ocp4_workload_cert_manager_provider == "zerossl" or ocp4_workload_cert_manager_provider_fallback | default("") == "zerossl"
   kubernetes.core.k8s:
     state: present
     template: secret-zerossl-credentials.yaml.j2
 
-
 - name: Set up cloud provider specific prerequisites for cert manager
   ansible.builtin.include_tasks: "cert_manager_{{ ocp4_workload_cert_manager_cloud_provider }}.yml"
-
 
 - name: Setup ACME Bifrost
   when: ocp4_workload_cert_manager_provider == "acme-bifrost" or ocp4_workload_cert_manager_provider_fallback == "acme-bifrost"
@@ -88,7 +78,6 @@
     delay: 30
     until: r_webhook_acme_bifrost is success
 
-
   - name: Wait for acme-bifrost-webhook deployment to be ready
     kubernetes.core.k8s_info:
       api_version: apps/v1
@@ -102,7 +91,6 @@
     - r_webhook_deployment.resources[0].status.readyReplicas == r_webhook_deployment.resources[0].spec.replicas
     retries: 30
     delay: 10
-
 
   - name: Wait for webhook APIService to be available
     kubernetes.core.k8s_info:
@@ -120,7 +108,6 @@
     retries: 30
     delay: 10
 
-
 - name: Set up ClusterIssuer
   kubernetes.core.k8s:
     state: present
@@ -130,13 +117,11 @@
   delay: 30
   until: r_clusterissuer is success
 
-
 - name: Set up ClusterIssuer fallback
   when: ocp4_workload_cert_manager_provider_fallback | default("") != ""
   kubernetes.core.k8s:
     state: present
     template: "clusterissuer-fallback.yaml.j2"
-
 
 - name: Request ingress certificate
   when: ocp4_workload_cert_manager_install_ingress_certificates | bool
@@ -148,7 +133,6 @@
   delay: 30
   until: r_certificate_ingress_request is success
 
-
 - name: Request API certificate
   when: ocp4_workload_cert_manager_install_api_certificates | bool
   kubernetes.core.k8s:
@@ -159,15 +143,12 @@
   delay: 30
   until: r_certificate_api_request is success
 
-
 - name: Install Ingress controller certificate
   when: ocp4_workload_cert_manager_install_ingress_certificates | bool
   block:
-
   - name: Run ingress controller certificate check task
     ansible.builtin.include_tasks: cert_manager_ingress_cert_check.yml
     with_sequence: start=0 end={{ ocp4_workload_cert_manager_ingress_cert_max_retries }}
-
 
   - name: Update Ingress controller to use certificate
     when: _ocp4_workload_cert_manager_ingress_cert_ready | default(false) | bool
@@ -175,20 +156,16 @@
       state: present
       template: default-ingress-controller.yaml.j2
 
-
 - name: Install API Server certificate
   when: ocp4_workload_cert_manager_install_api_certificates | bool
   block:
-
   - name: Run API certificate check task
     ansible.builtin.include_tasks: cert_manager_api_cert_check.yml
     with_sequence: start=0 end={{ ocp4_workload_cert_manager_api_cert_max_retries }}
 
-
   - name: API Certificate successfull
     when: _ocp4_workload_cert_manager_api_cert_ready | default(false) | bool
     block:
-
     - name: Update API server to use certificate
       kubernetes.core.k8s:
         state: present
@@ -198,11 +175,9 @@
     # restart with certificates (due to AWS
     # Load Balancer). Can't really check the cluster operator because once the updates have rolled out
     # subsequent checks will fail. :-(. Need to just sleep.
-
     - name: Wait for Cluster Operator kube-apiserver to finish rolling out
       ansible.builtin.pause:
         minutes: "{{ ocp4_workload_cert_manager_wait_after_api_cert_setup | int }}"
-
 
     - name: Find all Kube configs
       become: true
@@ -217,14 +192,12 @@
         recurse: true
       register: r_config_files
 
-
     - name: Fix Kube configs
       become: true
       ansible.builtin.replace:
         path: "{{ item.path }}"
         regexp: "^ +certificate-authority-data:.*"
       loop: "{{ r_config_files.files }}"
-
 
     - name: Make sure API calls succeed
       kubernetes.core.k8s_info:

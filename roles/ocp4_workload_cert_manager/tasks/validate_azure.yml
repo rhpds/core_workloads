@@ -1,5 +1,4 @@
 ---
-
 - name: Validate public Azure DNS settings
   ansible.builtin.assert:
     that:

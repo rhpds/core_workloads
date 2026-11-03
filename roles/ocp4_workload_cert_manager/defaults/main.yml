@@ -81,11 +81,11 @@ ocp4_workload_cert_manager_gcp_credentials: "{{ gcp_credentials }}"
 # ---------------------------------------------------------------
 # Azure DNS service principal application/client ID (string). Explicit role inputs
 # override these defaults. Prefer canonical Azure names; retain legacy aliases.
-ocp4_workload_cert_manager_azure_client_id: "{{ azure_service_principal_id | default(azure_service_principal | default('')) }}"
+ocp4_workload_cert_manager_azure_client_id: "{{ azure_service_principal_id }}"
 
 # Azure DNS service principal password (secret string). Stored in a Kubernetes
 # Secret in cert-manager for issuance AND renewal. Never log this value.
-ocp4_workload_cert_manager_azure_client_secret: "{{ azure_service_principal_password | default(azure_password | default('')) }}"
+ocp4_workload_cert_manager_azure_client_secret: "{{ azure_service_principal_password }}"
 
 # Azure cloud environment recognized by cert-manager (string), used by both
 # primary and fallback AzureDNS solvers. Public Azure is the default.
@@ -93,18 +93,18 @@ ocp4_workload_cert_manager_azure_environment: AzurePublicCloud
 
 # Existing publicly delegated Azure DNS zone (string, not a resource ID).
 # Enabled certificate targets must equal this zone or be beneath it.
-ocp4_workload_cert_manager_azure_hostedzone_name: "{{ azure_dns_zone | default(azure_user_domain | default('')) }}"
+ocp4_workload_cert_manager_azure_hostedzone_name: "{{ azure_dns_zone }}"
 
 # Resource group containing that DNS zone (string), NOT the cluster resource
 # group. The service principal needs DNS record write/delete permission here.
-ocp4_workload_cert_manager_azure_resource_group_name: "{{ azure_resource_group | default(az_dnszone_resource_group | default('')) }}"
+ocp4_workload_cert_manager_azure_resource_group_name: "{{ azure_resource_group }}"
 
 # Subscription containing the DNS zone (string). Canonical input then alias.
-ocp4_workload_cert_manager_azure_subscription_id: "{{ azure_subscription | default(azure_subscription_id | default('')) }}"
+ocp4_workload_cert_manager_azure_subscription_id: "{{ azure_subscription }}"
 
 # Tenant of the DNS service principal (string). An explicit role override may
 # supply a dedicated DNS identity independently of cluster provisioning.
-ocp4_workload_cert_manager_azure_tenant_id: "{{ azure_tenant | default(azure_tenant_id | default('')) }}"
+ocp4_workload_cert_manager_azure_tenant_id: "{{ azure_tenant }}"
 
 # ---------------------------------------------------------------
 # Operator settings
@@ -118,37 +118,3 @@ ocp4_workload_cert_manager_catalog_snapshot_image: quay.io/rhpds/olm_snapshot_re
 ocp4_workload_cert_manager_catalog_snapshot_image_tag: v4.19_2025_07_21
 # ocp4_workload_cert_manager_starting_csv: cert-manager-operator.v1.15.0
 ocp4_workload_cert_manager_automatic_install_plan_approval: true
-
-# Internal results of enabled Certificate creation tasks; never supply as inputs.
-r_certificate_ingress_request: "{{ undef(hint='Internal ingress certificate request result') }}"
-r_certificate_api_request: "{{ undef(hint='Internal API certificate request result') }}"
-# Task-local normalized Azure DNS zone used for label-boundary validation.
-_ocp4_workload_cert_manager_dns_zone: "{{ undef(hint='Internal normalized Azure DNS zone') }}"
-
-# External Azure inputs consumed by the standalone-role defaults above. These
-# stay undefined until supplied, so legacy aliases remain usable. In the v2
-# Azure config, normalized localhost facts supply the role-specific inputs.
-# azure_service_principal_id: canonical application/client UUID (string).
-azure_service_principal_id: "{{ undef(hint='Optional canonical Azure client ID') }}"
-# azure_service_principal: legacy application/client UUID alias (string).
-azure_service_principal: "{{ undef(hint='Optional legacy Azure client ID') }}"
-# azure_service_principal_password: canonical service principal password (secret).
-azure_service_principal_password: "{{ undef(hint='Optional canonical Azure client secret') }}"
-# azure_password: legacy service principal password alias (secret).
-azure_password: "{{ undef(hint='Optional legacy Azure client secret') }}"
-# azure_dns_zone: canonical existing public DNS zone name (string).
-azure_dns_zone: "{{ undef(hint='Optional canonical Azure DNS zone') }}"
-# azure_user_domain: legacy existing public DNS zone name alias (string).
-azure_user_domain: "{{ undef(hint='Optional legacy Azure DNS zone') }}"
-# azure_resource_group: canonical existing DNS/sandbox resource group (string).
-azure_resource_group: "{{ undef(hint='Optional canonical Azure DNS resource group') }}"
-# az_dnszone_resource_group: legacy DNS resource group alias (string).
-az_dnszone_resource_group: "{{ undef(hint='Optional legacy Azure DNS resource group') }}"
-# azure_subscription: canonical subscription UUID containing the DNS zone (string).
-azure_subscription: "{{ undef(hint='Optional canonical Azure subscription') }}"
-# azure_subscription_id: legacy subscription UUID alias (string).
-azure_subscription_id: "{{ undef(hint='Optional legacy Azure subscription') }}"
-# azure_tenant: canonical DNS identity tenant UUID or domain (string).
-azure_tenant: "{{ undef(hint='Optional canonical Azure tenant') }}"
-# azure_tenant_id: alternate DNS identity tenant UUID or domain (string).
-azure_tenant_id: "{{ undef(hint='Optional alternate Azure tenant') }}"
