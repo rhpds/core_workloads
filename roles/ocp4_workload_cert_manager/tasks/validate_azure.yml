@@ -1,0 +1,50 @@
+---
+
+- name: Validate public Azure DNS settings
+  ansible.builtin.assert:
+    that:
+    - lookup('vars', item) is string
+    - lookup('vars', item) | trim | length > 0
+    fail_msg: "Required Azure DNS input {{ item }} is missing or empty"
+  loop:
+  - ocp4_workload_cert_manager_azure_client_id
+  - ocp4_workload_cert_manager_azure_environment
+  - ocp4_workload_cert_manager_azure_hostedzone_name
+  - ocp4_workload_cert_manager_azure_resource_group_name
+  - ocp4_workload_cert_manager_azure_subscription_id
+  - ocp4_workload_cert_manager_azure_tenant_id
+
+- name: Validate protected Azure DNS client secret
+  ansible.builtin.assert:
+    that:
+    - ocp4_workload_cert_manager_azure_client_secret is string
+    - ocp4_workload_cert_manager_azure_client_secret | length > 0
+    fail_msg: Supply ocp4_workload_cert_manager_azure_client_secret or the Azure service principal password
+  no_log: true
+
+- name: Validate enabled certificate targets are nonempty hostnames
+  ansible.builtin.assert:
+    that:
+    - >-
+      not ocp4_workload_cert_manager_install_api_certificates | bool or
+      (_ocp4_workload_cert_manager_api_hostname is string and _ocp4_workload_cert_manager_api_hostname | length > 0)
+    - >-
+      not ocp4_workload_cert_manager_install_ingress_certificates | bool or
+      (_ocp4_workload_cert_manager_wildcard_domain is string and _ocp4_workload_cert_manager_wildcard_domain | length > 0)
+    fail_msg: Enabled certificates require openshift_api_url and/or openshift_cluster_ingress_domain
+
+- name: Validate enabled certificate targets belong to the Azure DNS zone
+  when: item | length > 0
+  vars:
+    _ocp4_workload_cert_manager_dns_zone: "{{ ocp4_workload_cert_manager_azure_hostedzone_name | lower | regex_replace('[.]$', '') }}"
+  ansible.builtin.assert:
+    that:
+    - >-
+      (item | lower | regex_replace('[.]$', '')) == _ocp4_workload_cert_manager_dns_zone or
+      (item | lower | regex_replace('[.]$', '')).endswith('.' ~ _ocp4_workload_cert_manager_dns_zone)
+    fail_msg: >-
+      Certificate target {{ item }} is outside Azure DNS zone {{ ocp4_workload_cert_manager_azure_hostedzone_name }}.
+      Microsoft-managed ARO domains require separate custom-domain configuration; this integration targets Azure IPI.
+  loop:
+  - "{{ _ocp4_workload_cert_manager_api_hostname }}"
+  - "{{ _ocp4_workload_cert_manager_wildcard_domain }}"
