@@ -12,7 +12,8 @@ This role uses a **fire-and-forget** approach:
 
 1. Creates the ArgoCD Application pointing to your repository
 2. Verifies the Application was accepted by the cluster (~1 minute max)
-3. Exits immediately — does **not** wait for sync or health status
+3. Checks that ArgoCD can read and render the repository (~30 seconds max). An error gives a warning in user info. The provision does not fail.
+4. Exits — does **not** wait for sync or health status
 
 **Why fire-and-forget?**
 
@@ -27,8 +28,8 @@ This role uses a **fire-and-forget** approach:
 | Invalid repo URL format | ✅ Yes | Playbook fails |
 | ArgoCD not installed | ✅ Yes | Playbook fails |
 | Malformed Application YAML | ✅ Yes | Playbook fails |
-| Repository doesn't exist | ❌ No | Developer checks ArgoCD |
-| Helm chart syntax errors | ❌ No | Developer checks ArgoCD |
+| Repository doesn't exist | ⚠️ Warning in user info | Developer checks ArgoCD |
+| Helm chart syntax errors | ⚠️ Warning in user info | Developer checks ArgoCD |
 | Pods failing to start | ❌ No | Developer checks OpenShift |
 
 ## Hybrid Deployment Model

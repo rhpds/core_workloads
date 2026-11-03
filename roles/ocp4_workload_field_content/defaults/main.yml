@@ -69,6 +69,12 @@ ocp4_workload_field_content_litemaas_model: "llama-scout-17b"
 # This role uses a "fire and forget" approach:
 #   - Creates the ArgoCD Application
 #   - Verifies it was accepted by the cluster (~1 min max)
+#   - Checks that ArgoCD can read and render the repository (~30 sec max).
+#     An error gives a warning in user info and does not fail the provision.
 #   - Does NOT wait for sync or health status
 #
 # Developers are responsible for monitoring their deployment in ArgoCD/OpenShift.
+
+# Retries/delay (seconds) for the repository check
+ocp4_workload_field_content_repo_check_retries: 6
+ocp4_workload_field_content_repo_check_delay: 5
