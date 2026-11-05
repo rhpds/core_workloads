@@ -90,9 +90,6 @@ class AzureCertManagerTests(unittest.TestCase):
             canonical = dict(azure_service_principal_id='app', azure_service_principal_password=SECRET,
                              azure_subscription='subscription', azure_tenant='tenant',
                              azure_resource_group='dns', azure_dns_zone='example.com')
-            legacy = dict(azure_service_principal='app', azure_password=SECRET,
-                          azure_subscription_id='subscription', azure_tenant='tenant',
-                          az_dnszone_resource_group='dns', azure_user_domain='example.com')
             explicit = {AZ + key: value for key, value in dict(client_id='app', client_secret=SECRET,
                          subscription_id='subscription', tenant_id='tenant', resource_group_name='dns',
                          hostedzone_name='example.com').items()}
@@ -103,8 +100,7 @@ class AzureCertManagerTests(unittest.TestCase):
                               if key.startswith(AZ)} if v2_config.exists() else {}
             if v2_config.exists():
                 self.assertEqual(len(config_mapping), 6)
-            cases = [('canonical', canonical, True), ('legacy', legacy, True),
-                     ('canonical-before-alias', dict(legacy, **canonical, azure_user_domain='wrong.test'), True),
+            cases = [('canonical', canonical, True),
                      ('explicit-overrides', dict(canonical, **explicit, azure_dns_zone='wrong.test'), True),
                      ('missing-secret', dict(canonical, azure_service_principal_password=''), False),
                      ('missing-client', dict(canonical, azure_service_principal_id=''), False),

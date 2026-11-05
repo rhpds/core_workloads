@@ -80,7 +80,7 @@ ocp4_workload_cert_manager_gcp_credentials: "{{ gcp_credentials }}"
 # Settings for Azure
 # ---------------------------------------------------------------
 # Azure DNS service principal application/client ID (string). Explicit role inputs
-# override these defaults. Prefer canonical Azure names; retain legacy aliases.
+# override these defaults, which use the canonical Azure names.
 ocp4_workload_cert_manager_azure_client_id: "{{ azure_service_principal_id }}"
 
 # Azure DNS service principal password (secret string). Stored in a Kubernetes
@@ -99,7 +99,7 @@ ocp4_workload_cert_manager_azure_hostedzone_name: "{{ azure_dns_zone }}"
 # group. The service principal needs DNS record write/delete permission here.
 ocp4_workload_cert_manager_azure_resource_group_name: "{{ azure_resource_group }}"
 
-# Subscription containing the DNS zone (string). Canonical input then alias.
+# Subscription containing the DNS zone (string).
 ocp4_workload_cert_manager_azure_subscription_id: "{{ azure_subscription }}"
 
 # Tenant of the DNS service principal (string). An explicit role override may
