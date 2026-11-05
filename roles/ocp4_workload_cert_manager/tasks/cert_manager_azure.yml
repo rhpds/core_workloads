@@ -3,3 +3,4 @@
   kubernetes.core.k8s:
     state: present
     template: secret-azure-credentials.yaml.j2
+  no_log: true

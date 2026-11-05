@@ -1,3 +1,98 @@
-= ocp4_workload_cert_manager - Install Red Hat Cert Manager Operator and Request and install certificates from Let's Encrypt or ZeroSSL
+= ocp4_workload_cert_manager
 
-See defaults/main.yml for variables to set.
+Installs the Red Hat cert-manager Operator, configures an ACME ClusterIssuer,
+requests certificates, and installs ready certificates on the default ingress
+controller and optionally the API server. It runs on the bastion with cluster-admin
+Kubernetes access. See `defaults/main.yml` for inputs and defaults.
+
+== Azure DNS with Azure IPI
+
+Use `cloud_provider: azure` and `host_ocp4_deploy_installation_method: openshift_install`.
+Add `agnosticd.core_workloads.ocp4_workload_cert_manager` to the config's existing
+`workloads` list. Ingress certificates are enabled by default; API certificates
+are disabled. Enabling API replacement restarts API servers and uses the existing
+rollout wait and kubeconfig adjustment flow.
+
+The Azure config maps normalized controller facts to these workload inputs, so
+workloads running on the bastion use the same sandbox credentials and delegated
+DNS zone:
+
+[cols="1,1"]
+|===
+|Role input suffix (`ocp4_workload_cert_manager_azure_`) |Controller fact
+|client_id |azure_auth.app_id
+|client_secret |azure_auth.password
+|subscription_id |azure_auth.subscription_id
+|tenant_id |azure_auth.tenant
+|hostedzone_name |azure_settings.dns_zone
+|resource_group_name |azure_settings.sandbox_group
+|===
+
+Explicit role-specific inputs override these defaults, allowing a dedicated DNS
+identity or a zone in another subscription. Standalone role use prefers canonical
+Azure variables and falls back to legacy aliases; missing values fail before
+operator installation. The default environment is `AzurePublicCloud`; both primary
+and fallback issuers honor `ocp4_workload_cert_manager_azure_environment`.
+
+The public zone must already exist and be delegated. The service principal must
+be able to read the zone and create/delete TXT records; `DNS Zone Contributor`
+on that zone is the documented AzureDNS setup. This workload creates neither
+identities nor role assignments. See
+https://cert-manager.io/docs/configuration/acme/dns01/azuredns/[AzureDNS authentication].
+The resource group is the one containing the DNS zone, not the cluster's group.
+
+Enabled certificate names must equal the zone or be descendants at a DNS-label
+boundary. Case and a final dot are ignored for this check. Azure IPI API/ingress
+names beneath the workshop zone work. Microsoft's managed ARO domains do not
+belong to that zone; ARO custom domains and HCP are outside this integration.
+Disabled targets are not requested or checked. Disabling a flag does not delete
+an already installed certificate or revert an existing endpoint.
+
+== Example
+
+[source,yaml]
+----
+cloud_provider: azure
+host_ocp4_deploy_installation_method: openshift_install
+workloads:
+- agnosticd.core_workloads.ocp4_workload_cert_manager
+
+# Ingress is the default; opt into API replacement only when needed.
+ocp4_workload_cert_manager_install_ingress_certificates: true
+ocp4_workload_cert_manager_install_api_certificates: false
+
+# First validate issuance with the staging CA (certificates are untrusted).
+# Omit this override for production Let's Encrypt certificates.
+ocp4_workload_cert_manager_acme_url: https://acme-staging-v02.api.letsencrypt.org/directory
+
+# Optional dedicated DNS identity. Supply its password through Vault/secrets.
+# ocp4_workload_cert_manager_azure_client_id: <application UUID>
+# ocp4_workload_cert_manager_azure_client_secret: <Vault reference>
+# ocp4_workload_cert_manager_azure_tenant_id: <tenant UUID or domain>
+# ocp4_workload_cert_manager_azure_subscription_id: <subscription UUID>
+# ocp4_workload_cert_manager_azure_resource_group_name: <DNS resource group>
+# ocp4_workload_cert_manager_azure_hostedzone_name: <guid>.azure.redhatworkshops.io
+----
+
+== Secrets, renewal and troubleshooting
+
+The client password is stored as `client-secret` in `cert-manager-azure-creds` in
+namespace `cert-manager`. Rendering and applying that Secret uses `no_log`.
+Protect access to the Secret and keep credentials valid for renewals. Both issuers
+reference the same Secret. Updating its credentials and rerunning the workload
+does not require creating a new service principal. Do not remove the credentials
+or DNS permissions after initial issuance.
+
+Certificates retain the existing 90-day duration and 15-day renewal window;
+cert-manager updates the same TLS Secrets referenced by ingress/API configuration.
+After issuance, verify the served certificate. Test renewal with `cmctl renew`
+and confirm the Certificate revision and served serial change. Operator installation,
+retries and optional fallback CA behavior otherwise follow the existing role.
+Removal of this workload is currently not implemented.
+
+For failures inspect `Certificate`, `CertificateRequest`, `Order` and `Challenge`
+conditions, and controller logs. Verify zone delegation, DNS permissions, tenant,
+subscription and the DNS resource group. A boundary failure is a configuration
+error; changing ACME providers will not fix it. Avoid dumping Secrets or credential
+variables while debugging. Live issuance and renewal create temporary Azure TXT
+records and require explicit approval in this project.

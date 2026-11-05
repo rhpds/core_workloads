@@ -20,9 +20,17 @@ spec:
 {% endif %}
     solvers:
     - selector:
+{% if not (ocp4_workload_cert_manager_install_api_certificates | bool or ocp4_workload_cert_manager_install_ingress_certificates | bool) %}
+        {}
+{% else %}
         dnsZones:
+{% if ocp4_workload_cert_manager_install_api_certificates | bool %}
         - {{ _ocp4_workload_cert_manager_api_hostname }}
+{% endif %}
+{% if ocp4_workload_cert_manager_install_ingress_certificates | bool %}
         - {{ _ocp4_workload_cert_manager_wildcard_domain }}
+{% endif %}
+{% endif %}
       dns01:
 {% if ocp4_workload_cert_manager_cloud_provider == "aws" and ocp4_workload_cert_manager_provider != "acme-bifrost" %}
         route53:
@@ -43,15 +51,15 @@ spec:
 {% endif %}
 {% if ocp4_workload_cert_manager_cloud_provider == "azure" %}
         azureDNS:
-          clientID: {{ ocp4_workload_cert_manager_azure_client_id }}
+          clientID: {{ ocp4_workload_cert_manager_azure_client_id | to_json }}
           clientSecretSecretRef:
             name: cert-manager-azure-creds
             key: client-secret
-          environment: AzurePublicCloud
-          hostedZoneName: {{ ocp4_workload_cert_manager_azure_hostedzone_name }}
-          resourceGroupName: {{ ocp4_workload_cert_manager_azure_resource_group_name }}
-          subscriptionID: {{ ocp4_workload_cert_manager_azure_subscription_id }}
-          tenantID: {{ ocp4_workload_cert_manager_azure_tenant_id }}
+          environment: {{ ocp4_workload_cert_manager_azure_environment | to_json }}
+          hostedZoneName: {{ ocp4_workload_cert_manager_azure_hostedzone_name | to_json }}
+          resourceGroupName: {{ ocp4_workload_cert_manager_azure_resource_group_name | to_json }}
+          subscriptionID: {{ ocp4_workload_cert_manager_azure_subscription_id | to_json }}
+          tenantID: {{ ocp4_workload_cert_manager_azure_tenant_id | to_json }}
 {% endif %}
 {% if ocp4_workload_cert_manager_provider == "acme-bifrost" %}
         webhook:

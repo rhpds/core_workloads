@@ -79,12 +79,31 @@ ocp4_workload_cert_manager_gcp_credentials: "{{ gcp_credentials }}"
 # ---------------------------------------------------------------
 # Settings for Azure
 # ---------------------------------------------------------------
-# Set from AgnosticV to the actual azure credentials
-ocp4_workload_cert_manager_azure_client_id: "{{ azure_service_principal }}"
+# Azure DNS service principal application/client ID (string). Explicit role inputs
+# override these defaults, which use the canonical Azure names.
+ocp4_workload_cert_manager_azure_client_id: "{{ azure_service_principal_id }}"
+
+# Azure DNS service principal password (secret string). Stored in a Kubernetes
+# Secret in cert-manager for issuance AND renewal. Never log this value.
+ocp4_workload_cert_manager_azure_client_secret: "{{ azure_service_principal_password }}"
+
+# Azure cloud environment recognized by cert-manager (string), used by both
+# primary and fallback AzureDNS solvers. Public Azure is the default.
 ocp4_workload_cert_manager_azure_environment: AzurePublicCloud
-ocp4_workload_cert_manager_azure_hostedzone_name: "{{ azure_user_domain }}"
-ocp4_workload_cert_manager_azure_resource_group_name: "{{ az_dnszone_resource_group }}"
-ocp4_workload_cert_manager_azure_subscription_id: "{{ azure_subscription_id }}"
+
+# Existing publicly delegated Azure DNS zone (string, not a resource ID).
+# Enabled certificate targets must equal this zone or be beneath it.
+ocp4_workload_cert_manager_azure_hostedzone_name: "{{ azure_dns_zone }}"
+
+# Resource group containing that DNS zone (string), NOT the cluster resource
+# group. The service principal needs DNS record write/delete permission here.
+ocp4_workload_cert_manager_azure_resource_group_name: "{{ azure_resource_group }}"
+
+# Subscription containing the DNS zone (string).
+ocp4_workload_cert_manager_azure_subscription_id: "{{ azure_subscription }}"
+
+# Tenant of the DNS service principal (string). An explicit role override may
+# supply a dedicated DNS identity independently of cluster provisioning.
 ocp4_workload_cert_manager_azure_tenant_id: "{{ azure_tenant }}"
 
 # ---------------------------------------------------------------

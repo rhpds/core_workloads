@@ -1,4 +1,15 @@
 ---
+- name: Set DNS facts for enabled certificate targets
+  ansible.builtin.set_fact:
+    _ocp4_workload_cert_manager_api_hostname: >-
+      {{ (openshift_api_url | urlsplit('hostname')) if ocp4_workload_cert_manager_install_api_certificates | bool else '' }}
+    _ocp4_workload_cert_manager_wildcard_domain: >-
+      {{ openshift_cluster_ingress_domain if ocp4_workload_cert_manager_install_ingress_certificates | bool else '' }}
+
+- name: Validate Azure DNS inputs before installing the operator
+  when: ocp4_workload_cert_manager_cloud_provider == 'azure'
+  ansible.builtin.include_tasks: validate_azure.yml
+
 - name: Install Red Hat Cert Manager operator
   ansible.builtin.include_role:
     name: install_operator
@@ -25,13 +36,6 @@
   kubernetes.core.k8s:
     state: present
     template: certmanager.yaml.j2
-
-- name: Set DNS facts
-  ansible.builtin.set_fact:
-    _ocp4_workload_cert_manager_api_hostname: >-
-      {{ openshift_api_url | urlsplit('hostname') }}
-    _ocp4_workload_cert_manager_wildcard_domain: >-
-      {{ openshift_cluster_ingress_domain }}
 
 - name: Print API and wildcard domain
   ansible.builtin.debug:
@@ -64,6 +68,7 @@
 - name: Setup ACME Bifrost
   when: ocp4_workload_cert_manager_provider == "acme-bifrost" or ocp4_workload_cert_manager_provider_fallback == "acme-bifrost"
   block:
+
   - name: Deploy ACME Bifrost webhook
     kubernetes.core.k8s:
       state: present
@@ -103,14 +108,10 @@
     retries: 30
     delay: 10
 
-- name: Set up ClusterIssuer and request certificates
+- name: Set up ClusterIssuer
   kubernetes.core.k8s:
     state: present
-    template: "{{ item }}"
-  loop:
-  - clusterissuer.yaml.j2
-  - certificate-ingress.yaml.j2
-  - certificate-api.yaml.j2
+    template: clusterissuer.yaml.j2
   register: r_clusterissuer
   retries: 10
   delay: 30
@@ -121,6 +122,26 @@
   kubernetes.core.k8s:
     state: present
     template: "clusterissuer-fallback.yaml.j2"
+
+- name: Request ingress certificate
+  when: ocp4_workload_cert_manager_install_ingress_certificates | bool
+  kubernetes.core.k8s:
+    state: present
+    template: certificate-ingress.yaml.j2
+  register: r_certificate_ingress_request
+  retries: 10
+  delay: 30
+  until: r_certificate_ingress_request is success
+
+- name: Request API certificate
+  when: ocp4_workload_cert_manager_install_api_certificates | bool
+  kubernetes.core.k8s:
+    state: present
+    template: certificate-api.yaml.j2
+  register: r_certificate_api_request
+  retries: 10
+  delay: 30
+  until: r_certificate_api_request is success
 
 - name: Install Ingress controller certificate
   when: ocp4_workload_cert_manager_install_ingress_certificates | bool
