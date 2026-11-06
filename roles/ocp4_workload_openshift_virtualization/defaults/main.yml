@@ -41,6 +41,11 @@ ocp4_workload_openshift_virtualization_enabled_nested_kvm: false
 # Only set to false if a lab needs students to create it
 ocp4_workload_openshift_virtualization_deploy_hyperconverged: true
 
+# Retry HCO readiness queries through temporary API/webhook outages during node
+# rollouts. Defaults allow approximately 20 minutes, plus API request duration.
+ocp4_workload_openshift_virtualization_hco_wait_retries: 120
+ocp4_workload_openshift_virtualization_hco_wait_delay: 10
+
 # Install virtctl - requires hyperconverged to be deployed
 ocp4_workload_openshift_virtualization_install_virtctl: true
 

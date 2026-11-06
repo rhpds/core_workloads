@@ -42,13 +42,27 @@
       kind: HyperConverged
       name: kubevirt-hyperconverged
       namespace: openshift-cnv
-      wait: true
-      wait_sleep: 10
-      wait_timeout: 1200
-      wait_condition:
-        reason: "ReconcileCompleted"
-        type: "Available"
-        status: "True"
+    # Retry the API request itself: the module's internal wait exits on webhook
+    # conversion errors, which can occur while operator nodes are rebooting.
+    register: r_openshift_virtualization_hco
+    vars:
+      _hco_conditions: >-
+        {{ (r_openshift_virtualization_hco.resources | default([])
+            | first | default({})).get('status', {}).get('conditions', []) }}
+    until:
+    - r_openshift_virtualization_hco is succeeded
+    - r_openshift_virtualization_hco.resources | default([]) | length == 1
+    - >-
+      _hco_conditions | selectattr('type', 'equalto', 'Available')
+      | map(attribute='status') | list == ['True']
+    - >-
+      _hco_conditions | selectattr('type', 'equalto', 'Progressing')
+      | map(attribute='status') | list == ['False']
+    - >-
+      _hco_conditions | selectattr('type', 'equalto', 'Degraded')
+      | map(attribute='status') | list == ['False']
+    retries: "{{ ocp4_workload_openshift_virtualization_hco_wait_retries }}"
+    delay: "{{ ocp4_workload_openshift_virtualization_hco_wait_delay }}"
 
   # For deployments on CNV with external Ceph use PVCs for boot image snapshots
   # HyperConverged must have been created with .spec.enableCommonBootImageImport: false
