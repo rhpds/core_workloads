@@ -1,3 +1,18 @@
 = ocp4_workload_openshift_virtualization - Deploy OpenShift Virtualization to an OpenShift Cluster
 
 See defaults/main.yml for variables to set.
+
+== HyperConverged readiness
+
+The role retries HyperConverged API queries through temporary conversion-webhook
+or API outages, such as those caused by node reboots during a MachineConfig rollout.
+Readiness requires `Available=True`, `Progressing=False`, and `Degraded=False`.
+Missing resources or conditions do not count as ready. Persistent errors or an
+unhealthy HyperConverged instance fail the task when its retry budget is exhausted.
+
+* `ocp4_workload_openshift_virtualization_hco_wait_retries`: `120`
+* `ocp4_workload_openshift_virtualization_hco_wait_delay`: `10` seconds
+
+The default retry budget is approximately 20 minutes, plus API request duration.
+This role does not apply MachineConfigs or sequence external MachineConfig changes;
+callers managing such changes should wait for their rollout where appropriate.
