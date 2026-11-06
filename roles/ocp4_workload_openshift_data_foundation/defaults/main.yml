@@ -26,6 +26,33 @@ ocp4_workload_openshift_data_foundation_update_default_storage_class: false
 ocp4_workload_openshift_data_foundation_new_default_storage_class_name: ocs-storagecluster-ceph-rbd
 
 # --------------------------------
+# Multi-Cloud Gateway (NooBaa) Configuration
+# --------------------------------
+# Dictionary of multiCloudGateway settings for the StorageCluster
+# Only renders multiCloudGateway section if defined and not empty
+# Common use case: set dbStorageClassName to avoid circular dependency
+#
+# Example:
+# ocp4_workload_openshift_data_foundation_multicloud_gateway:
+#   dbStorageClassName: gp3-csi
+#
+# Additional supported fields (optional):
+#   reconcileStrategy: <strategy>
+#   endpoints: <endpoints_config>
+#   etc.
+
+# --------------------------------
+# AWS Credentials for NooBaa (AWS only)
+# --------------------------------
+# If both variables are defined, the workload will:
+# 1. Create temporary aws-creds in kube-system
+# 2. Wait for CCO to provision scoped NooBaa credentials
+# 3. Delete the temporary aws-creds
+# Leave undefined to skip AWS credential provisioning
+# ocp4_workload_openshift_data_foundation_aws_access_key_id: ""
+# ocp4_workload_openshift_data_foundation_aws_secret_access_key: ""
+
+# --------------------------------
 # Tolerations for ODF Pods
 # --------------------------------
 ocp4_workload_openshift_data_foundation_tolerations: []

@@ -12,6 +12,10 @@ spec:
         {{ ocp4_workload_openshift_data_foundation_tolerations | to_yaml }}
 {% endif %}
   manageNodes: false
+{% if ocp4_workload_openshift_data_foundation_multicloud_gateway is defined and ocp4_workload_openshift_data_foundation_multicloud_gateway | length > 0 %}
+  multiCloudGateway:
+{{ ocp4_workload_openshift_data_foundation_multicloud_gateway | to_nice_yaml | indent(4, first=True) }}
+{% endif %}
   storageDeviceSets:
   - name: ocs-deviceset
     count: 1
