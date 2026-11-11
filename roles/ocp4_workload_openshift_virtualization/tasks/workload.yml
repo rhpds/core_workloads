@@ -35,6 +35,16 @@
     kubernetes.core.k8s:
       state: present
       definition: "{{ lookup('template', 'hyperconverged.yaml.j2') }}"
+    # The HCO conversion webhook (hco-webhook-service:4343) can be briefly
+    # unavailable while the operator is still rolling out - its pods reboot and
+    # the endpoint is not yet serving until the CSV reaches Succeeded. During
+    # that window this apply fails with an HTTP 500 "conversion webhook ...
+    # connect: connection refused". Retry the apply until it goes through,
+    # mirroring the wait below (#200 only hardened the read, not the apply).
+    register: r_openshift_virtualization_hco_create
+    until: r_openshift_virtualization_hco_create is succeeded
+    retries: "{{ ocp4_workload_openshift_virtualization_hco_wait_retries }}"
+    delay: "{{ ocp4_workload_openshift_virtualization_hco_wait_delay }}"
 
   - name: Wait until HyperConverged is installed
     kubernetes.core.k8s_info:
