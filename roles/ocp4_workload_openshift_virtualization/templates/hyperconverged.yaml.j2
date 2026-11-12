@@ -11,8 +11,11 @@ spec:
       tolerations:
         {{ ocp4_workload_openshift_virtualization_workload_tolerations | to_yaml }}
 {% endif %}
-{% if ocp4_workload_openshift_virtualization_boot_sources_snapshot | default(true) | bool %}
-  enableCommonBootImageImport: true
-{% else %}
+{# Only an explicit false defers the import, so workload.yml can set the pvc #}
+{# format on the StorageProfile first and enable the import afterwards. #}
+{% set _boot_sources = ocp4_workload_openshift_virtualization_boot_sources_snapshot | default(none) %}
+{% if _boot_sources is not none and not (_boot_sources | bool) %}
   enableCommonBootImageImport: false
+{% else %}
+  enableCommonBootImageImport: true
 {% endif %}
