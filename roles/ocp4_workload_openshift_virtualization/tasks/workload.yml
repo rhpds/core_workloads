@@ -74,11 +74,13 @@
     retries: "{{ ocp4_workload_openshift_virtualization_hco_wait_retries }}"
     delay: "{{ ocp4_workload_openshift_virtualization_hco_wait_delay }}"
 
-  # For deployments on CNV with external Ceph use PVCs for boot image snapshots
-  # HyperConverged must have been created with .spec.enableCommonBootImageImport: false
-  # See template for that logic
-  - name: Set boot sources to use PVCs
-    when: not ocp4_workload_openshift_virtualization_boot_sources_snapshot | bool
+  # Boot sources are stored as VolumeSnapshots (default) or as PVCs, the latter
+  # for deployments on CNV with external Ceph. CDI defaults to pvc, so the
+  # snapshot format has to be set explicitly too - otherwise every VM cloned from
+  # a boot source first snapshots the source PVC, which on AWS EBS costs minutes.
+  # For pvc, HyperConverged must have been created with
+  # .spec.enableCommonBootImageImport: false - see template for that logic.
+  - name: Set the boot source format on the default storage class
     block:
     - name: Get all available storage classes
       kubernetes.core.k8s_info:
@@ -93,7 +95,7 @@
 
     - name: Find default storage class
       ansible.builtin.set_fact:
-        _ocp4_workload_openshift_virtualization_default_storage_class: "{{ default_sc[0] }}"
+        _ocp4_workload_openshift_virtualization_default_storage_class: "{{ default_sc | first | default('', true) }}"
       vars:
         default_sc: "{{ r_storageclasses.resources | json_query(query_sc) }}"
         query_sc: "[?metadata.annotations.\"storageclass.kubernetes.io/is-default-class\" == 'true'].metadata.name"
@@ -107,7 +109,7 @@
       ansible.builtin.debug:
         msg: "Default storage class: {{ _ocp4_workload_openshift_virtualization_default_storage_class }}"
 
-    - name: Patch the storage profile matching the default storage class to use pvc instead of snapshot
+    - name: Patch the storage profile matching the default storage class with the boot source format
       kubernetes.core.k8s:
         state: patched
         api_version: cdi.kubevirt.io/v1beta1
@@ -115,7 +117,8 @@
         name: "{{ _ocp4_workload_openshift_virtualization_default_storage_class }}"
         definition:
           spec:
-            dataImportCronSourceFormat: pvc
+            dataImportCronSourceFormat: >-
+              {{ 'snapshot' if ocp4_workload_openshift_virtualization_boot_sources_snapshot | bool else 'pvc' }}
 
     - name: If we are using Hosted Control Planes, it is needed to set default accessMode, volumeMode and cloneStrategy
       when: _ocp4_workload_openshift_virtualization_default_storage_class == "kubevirt-csi-infra-default"
@@ -132,7 +135,7 @@
               volumeMode: Block
             cloneStrategy: copy
 
-    - name: Finally patch HyperConverged to import boot sources now using PVCs
+    - name: Finally patch HyperConverged to import boot sources now the format is set
       kubernetes.core.k8s:
         state: patched
         api_version: hco.kubevirt.io/v1beta1

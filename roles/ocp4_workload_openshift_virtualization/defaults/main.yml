@@ -27,6 +27,9 @@ ocp4_workload_openshift_virtualization_workload_tolerations: []
 #   operator: Exists
 
 # Use Snapshots for boot sources - which is the default
+# The StorageProfile of the default storage class is patched either way, as CDI
+# itself defaults to pvc. With pvc every VM cloned from a boot source first has
+# to snapshot the source PVC, which on AWS EBS takes minutes per VM.
 # For deployments on top of CNV with Ceph set to false
 # When set to false CNV is configured to use PVCs for boot sources
 # which elminiates VolumeSnapshots without associated PVCs
