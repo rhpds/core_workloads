@@ -130,8 +130,10 @@ ocp4_workload_openshift_gitops_resource_health: ""
 # Configure the Kustomize plugin for ArgoCD.
 # This plugin allows ArgoCD to run Kustomize on manifests that require environment variable substitution.
 ocp4_workload_openshift_gitops_kustomize_plugin: false
-# The image must contain Perl and Kustomize.
-ocp4_workload_openshift_gitops_kustomize_plugin_image: quay.io/devfile/universal-developer-image:ubi8-latest
+# The image must contain Perl and Kustomize, and must be UBI9 based: the sidecar
+# runs the argocd-cmp-server binary mounted from the repo-server image, which is
+# argocd-rhel9 and needs glibc 2.34.
+ocp4_workload_openshift_gitops_kustomize_plugin_image: quay.io/devfile/universal-developer-image:ubi9-latest
 
 # Environment variables to pass to the Kustomize plugin.
 # GitOps repo based on Kustomize can use these variables.
