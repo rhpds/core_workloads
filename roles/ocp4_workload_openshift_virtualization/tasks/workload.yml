@@ -74,13 +74,13 @@
     retries: "{{ ocp4_workload_openshift_virtualization_hco_wait_retries }}"
     delay: "{{ ocp4_workload_openshift_virtualization_hco_wait_delay }}"
 
-  # Boot sources are stored as VolumeSnapshots (default) or as PVCs, the latter
-  # for deployments on CNV with external Ceph. CDI defaults to pvc, so the
-  # snapshot format has to be set explicitly too - otherwise every VM cloned from
-  # a boot source first snapshots the source PVC, which on AWS EBS costs minutes.
+  # Boot sources are stored as VolumeSnapshots or as PVCs, the latter for
+  # deployments on CNV with external Ceph. Left unset the StorageProfile is not
+  # touched at all and CDI picks the format itself.
   # For pvc, HyperConverged must have been created with
   # .spec.enableCommonBootImageImport: false - see template for that logic.
   - name: Set the boot source format on the default storage class
+    when: ocp4_workload_openshift_virtualization_boot_sources_snapshot is not none
     block:
     - name: Get all available storage classes
       kubernetes.core.k8s_info:
