@@ -41,6 +41,17 @@
   - r_openshift_gitops.resources is defined
   - r_openshift_gitops.resources | length == 1
 
+- name: Enable the GitOps console plugin
+  when: ocp4_workload_openshift_gitops_enable_console_plugin | bool
+  kubernetes.core.k8s_json_patch:
+    api_version: operator.openshift.io/v1
+    kind: Console
+    name: cluster
+    patch:
+    - op: add
+      path: /spec/plugins/-
+      value: gitops-plugin
+
 - name: Create the kustomize-envvar plugin configmap
   when: ocp4_workload_openshift_gitops_kustomize_plugin | bool
   kubernetes.core.k8s:
