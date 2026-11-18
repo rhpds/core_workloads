@@ -26,6 +26,9 @@ ocp4_workload_openshift_gitops_setup_cluster_admin: false
 # Enable the route for the default ArgoCD instance.
 ocp4_workload_openshift_gitops_enable_route: true
 
+# Enable the gitops-plugin ConsolePlugin in the OpenShift web console.
+ocp4_workload_openshift_gitops_enable_console_plugin: false
+
 # Set the openshift-gitops route to use re-encrypt in order for the OpenShift Gitops ArgoCD
 # installation to not throw connection warnings. Default is false for default behavior
 ocp4_workload_openshift_gitops_update_route_tls: false
