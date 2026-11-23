@@ -1,0 +1,139 @@
+---
+# ===================================================================
+# Step 1: Install OSC Operator
+# ===================================================================
+
+- name: Install OpenShift sandboxed containers operator
+  ansible.builtin.include_role:
+    name: install_operator
+  vars:
+    install_operator_action: install
+    install_operator_name: sandboxed-containers-operator
+    install_operator_namespace: "{{ ocp4_workload_osc_configure_aro_namespace }}"
+    install_operator_manage_namespaces:
+    - "{{ ocp4_workload_osc_configure_aro_namespace }}"
+    install_operator_channel: "{{ ocp4_workload_osc_configure_aro_channel }}"
+    install_operator_catalog: redhat-operators
+    install_operator_automatic_install_plan_approval: "{{ ocp4_workload_osc_configure_aro_automatic_install_plan_approval }}"
+    install_operator_starting_csv: "{{ ocp4_workload_osc_configure_aro_starting_csv }}"
+    install_operator_catalogsource_setup: "{{ ocp4_workload_osc_configure_aro_use_catalog_snapshot }}"
+    install_operator_catalogsource_name: "{{ ocp4_workload_osc_configure_aro_catalogsource_name }}"
+    install_operator_catalogsource_namespace: "{{ ocp4_workload_osc_configure_aro_namespace }}"
+    install_operator_catalogsource_image: "{{ ocp4_workload_osc_configure_aro_catalog_snapshot_image }}"
+    install_operator_catalogsource_image_tag: "{{ ocp4_workload_osc_configure_aro_catalog_snapshot_image_tag }}"
+
+- name: Wait for OSC controller-manager deployment
+  kubernetes.core.k8s_info:
+    api_version: apps/v1
+    kind: Deployment
+    name: controller-manager
+    namespace: "{{ ocp4_workload_osc_configure_aro_namespace }}"
+  register: r_osc_deployment
+  until:
+  - r_osc_deployment.resources | default([]) | length > 0
+  - r_osc_deployment.resources[0].status.readyReplicas | default(0) | int >= 1
+  delay: 25
+  retries: "{{ (ocp4_workload_osc_configure_aro_operator_wait_timeout | int / 25) | round(0, 'ceil') | int }}"
+
+- name: OSC operator is ready
+  ansible.builtin.debug:
+    msg: "OSC operator controller-manager is ready"
+
+# ===================================================================
+# Step 2: Label worker node(s) for the kata-oc pool
+# ===================================================================
+
+- name: Get worker nodes
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Node
+    label_selectors:
+    - node-role.kubernetes.io/worker
+  register: r_worker_nodes
+
+- name: Assert at least one worker node is available to label
+  ansible.builtin.assert:
+    that:
+    - r_worker_nodes.resources | default([]) | length > 0
+    fail_msg: "No nodes found with label node-role.kubernetes.io/worker"
+    quiet: true
+
+- name: Label worker node(s) for kata
+  vars:
+    _label_key: "{{ ocp4_workload_osc_configure_aro_kata_worker_label.split('=')[0] }}"
+    _label_value: "{{ ocp4_workload_osc_configure_aro_kata_worker_label.split('=')[1] }}"
+  kubernetes.core.k8s:
+    state: patched
+    api_version: v1
+    kind: Node
+    name: "{{ item.metadata.name }}"
+    definition:
+      metadata:
+        labels:
+          "{{ _label_key }}": "{{ _label_value }}"
+  loop: >-
+    {{ r_worker_nodes.resources[:(ocp4_workload_osc_configure_aro_kata_worker_count | int)] }}
+  loop_control:
+    label: "{{ item.metadata.name }}"
+
+# ===================================================================
+# Step 3: Create KataConfig (plain kata, no peer pods)
+# ===================================================================
+
+- name: Create KataConfig
+  vars:
+    _label_key: "{{ ocp4_workload_osc_configure_aro_kata_worker_label.split('=')[0] }}"
+    _label_value: "{{ ocp4_workload_osc_configure_aro_kata_worker_label.split('=')[1] }}"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: kataconfiguration.openshift.io/v1
+      kind: KataConfig
+      metadata:
+        name: "{{ ocp4_workload_osc_configure_aro_kataconfig_name }}"
+      spec:
+        enablePeerPods: false
+        kataConfigPoolSelector:
+          matchLabels:
+            "{{ _label_key }}": "{{ _label_value }}"
+
+# ===================================================================
+# Step 4: Wait for MCP and RuntimeClass
+# ===================================================================
+
+- name: Wait for kata-oc MachineConfigPool to finish rolling
+  kubernetes.core.k8s_info:
+    api_version: machineconfiguration.openshift.io/v1
+    kind: MachineConfigPool
+    name: kata-oc
+  register: r_mcp_kata_oc
+  vars:
+    _conditions: "{{ r_mcp_kata_oc.resources[0].status.conditions | default([]) }}"
+    _updated: "{{ _conditions | selectattr('type', 'equalto', 'Updated') | map(attribute='status') | first | default('') }}"
+    _updating: "{{ _conditions | selectattr('type', 'equalto', 'Updating') | map(attribute='status') | first | default('') }}"
+    _degraded: "{{ _conditions | selectattr('type', 'equalto', 'Degraded') | map(attribute='status') | first | default('') }}"
+  until:
+  - r_mcp_kata_oc.resources | default([]) | length > 0
+  - _updated == "True"
+  - _updating == "False"
+  - _degraded == "False"
+  delay: 30
+  retries: "{{ (ocp4_workload_osc_configure_aro_mcp_wait_timeout | int / 30) | round(0, 'ceil') | int }}"
+
+- name: MCP kata-oc is ready
+  ansible.builtin.debug:
+    msg: "MachineConfigPool kata-oc has finished rolling"
+
+- name: Wait for kata RuntimeClass
+  kubernetes.core.k8s_info:
+    api_version: node.k8s.io/v1
+    kind: RuntimeClass
+    name: kata
+  register: r_rc_kata
+  until: r_rc_kata.resources | default([]) | length > 0
+  delay: 60
+  retries: "{{ (ocp4_workload_osc_configure_aro_runtimeclass_wait_timeout | int / 60) | round(0, 'ceil') | int }}"
+
+- name: kata RuntimeClass is ready
+  ansible.builtin.debug:
+    msg: "kata RuntimeClass is available"
