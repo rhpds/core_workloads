@@ -1,0 +1,24 @@
+= ocp4_workload_osc_configure_aro - Install OpenShift sandboxed containers (plain `kata`) on ARO
+
+Installs the OpenShift sandboxed containers (OSC) operator and configures a
+plain `kata` `RuntimeClass` via a `KataConfig` with `enablePeerPods: false`.
+
+This role is intentionally minimal and is **not** a port of the v1-only
+`redhat-cop/agnosticd` role of the same name. It does not:
+
+* enable peer pods / `kata-remote`
+* create any Azure networking (NAT gateway, public IP)
+* call the `az` CLI or authenticate against Azure
+* download or install a kata-containers RPM hotfix
+* reboot any node
+
+It exists for labs/demos that only need hardware-isolated `kata` sandboxes
+(for example, the agent-sandbox workshop), where the above are unnecessary
+overhead and risk (unauthenticated Google Drive download, non-idempotent
+`az network` calls, node reboot, ongoing NAT gateway cost).
+
+Every task uses `kubernetes.core.k8s` / `kubernetes.core.k8s_info`; none
+shell out to `oc` or `az`, so the role is idempotent on re-run without any
+`changed_when` overrides.
+
+See `defaults/main.yml` for all variables.
