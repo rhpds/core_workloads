@@ -1,0 +1,31 @@
+---
+# -------------------------------------------------------------------
+# Operator install
+# -------------------------------------------------------------------
+ocp4_workload_osc_configure_aro_namespace: openshift-sandboxed-containers-operator
+ocp4_workload_osc_configure_aro_channel: stable
+ocp4_workload_osc_configure_aro_automatic_install_plan_approval: true
+ocp4_workload_osc_configure_aro_starting_csv: ""
+ocp4_workload_osc_configure_aro_use_catalog_snapshot: false
+ocp4_workload_osc_configure_aro_catalogsource_name: ""
+ocp4_workload_osc_configure_aro_catalog_snapshot_image: quay.io/rhpds/olm_snapshot_redhat_catalog
+ocp4_workload_osc_configure_aro_catalog_snapshot_image_tag: ""
+
+ocp4_workload_osc_configure_aro_operator_wait_timeout: 600
+
+# -------------------------------------------------------------------
+# KataConfig
+# -------------------------------------------------------------------
+# Label applied to the worker node(s) selected for the kata-oc
+# MachineConfigPool. Only plain `kata` (runc-in-VM) is configured --
+# peer pods / kata-remote are intentionally NOT enabled, since the
+# agent-sandbox-workshop lab content only ever uses runtimeClassName: kata.
+ocp4_workload_osc_configure_aro_kata_worker_label: workerType=kataWorker
+ocp4_workload_osc_configure_aro_kataconfig_name: example-kataconfig
+
+# Number of (worker) nodes to label for the kata-oc pool. Set higher than 1
+# for warm pools that need to schedule kata sandboxes across multiple nodes.
+ocp4_workload_osc_configure_aro_kata_worker_count: 1
+
+ocp4_workload_osc_configure_aro_mcp_wait_timeout: 1800
+ocp4_workload_osc_configure_aro_runtimeclass_wait_timeout: 1200
