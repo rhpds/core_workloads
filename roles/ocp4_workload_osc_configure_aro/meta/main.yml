@@ -1,0 +1,24 @@
+---
+galaxy_info:
+  role_name: ocp4_workload_osc_configure_aro
+  author: Red Hat, Andrew Jones (andrjone@redhat.com)
+  description: |
+    Installs the OpenShift sandboxed containers (OSC) operator and configures
+    a plain `kata` RuntimeClass on an Azure Red Hat OpenShift (ARO) cluster.
+
+    This is intentionally minimal: it does not enable peer pods / kata-remote,
+    does not touch Azure networking, does not require the `az` CLI, and does
+    not install a kata-containers RPM hotfix or reboot any node. It exists to
+    support demos/labs (such as the agent-sandbox workshop) that only need a
+    plain `kata` RuntimeClass for Kata VM isolation.
+  license: MIT
+  min_ansible_version: "2.9"
+  platforms: []
+  galaxy_tags:
+  - ocp
+  - openshift
+  - azure
+  - aro
+  - sandboxed-containers
+  - kata
+dependencies: []
