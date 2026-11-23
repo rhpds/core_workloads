@@ -134,6 +134,6 @@
   delay: 60
   retries: "{{ (ocp4_workload_osc_configure_aro_runtimeclass_wait_timeout | int / 60) | round(0, 'ceil') | int }}"
 
-- name: kata RuntimeClass is ready
+- name: Kata RuntimeClass is ready
   ansible.builtin.debug:
     msg: "kata RuntimeClass is available"
