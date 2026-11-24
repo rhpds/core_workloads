@@ -1,0 +1,8 @@
+---
+- name: Running workload provision tasks
+  when: ACTION in ["provision", "create"]
+  ansible.builtin.include_tasks: workload.yml
+
+- name: Running workload removal tasks
+  when: ACTION in ["destroy", "remove"]
+  ansible.builtin.include_tasks: remove_workload.yml
