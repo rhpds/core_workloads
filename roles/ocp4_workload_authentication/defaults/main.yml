@@ -121,7 +121,8 @@ ocp4_workload_authentication_keycloak_openshift_client_id: idp-4-ocp
 # --------------------------------
 
 # List of additional OAuth clients to create in the realm
-# The OpenShift client is always created automatically
+# The role configures the OpenShift client automatically. On ARO HCP it is
+# configured through the Keycloak Admin API after the realm is available.
 # Each client entry should have:
 #   - clientId: Client ID (required)
 #   - secret: Client secret (required)
@@ -173,6 +174,18 @@ ocp4_workload_authentication_keycloak_clients: []
 #       - query-groups
 
 ocp4_workload_authentication_keycloak_enable_user_info_messages: true
+
+# Internal authentication backend and platform detection from cluster metadata.
+_ocp4_workload_authentication_auth_method: ""
+_azure_hosted_control_plane: false
+# Internal Keycloak CRD discovery. Prefer the served beta API and support older
+# operators that advertise only the alpha API.
+_ocp4_workload_authentication_keycloak_crds: {}
+_ocp4_workload_authentication_keycloak_api_versions: {}
+_ocp4_workload_authentication_keycloak_served_versions: []
+_keycloak_crd: {}
+# Internal CLI login text for clusters that use the built-in OAuth server.
+_login_command: ""
 
 # --------------------------------
 # ROSA Settings

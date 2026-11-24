@@ -6,6 +6,14 @@ See defaults/main.yml for variables to set.
 
 == Usage
 
+For ARO with Hosted Control Planes, set `ocp4_workload_authentication_provider: keycloak`.
+Use the original Azure deployment variables and a current administrative kubeconfig.
+The role deploys the Keycloak realm and accounts, then calls the Azure collection's
+`host_ocp4_aro_hcp_external_auth` role to configure direct OIDC for the console.
+The generated user credentials are used on the Keycloak sign-in page.
+Azure classic and ROSA continue to use their usual integration.
+
+
 When configuring authentication for an RHDP service it is important to think
 about the relationship of authentication to the users of the service, in
 particular what accounts are configured and reported for the cluster itself

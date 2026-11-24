@@ -1,6 +1,7 @@
 ---
-- name: Detect ROSA cluster
+- name: Detect the cluster authentication backend
   block:
+
   - name: Get cluster infrastructure info
     kubernetes.core.k8s_info:
       api_version: config.openshift.io/v1
@@ -17,18 +18,29 @@
       _cluster_type: >-
         {{ _resource_tags | selectattr('key', 'equalto', 'red-hat-clustertype')
           | map(attribute='value') | first | default('') }}
+
+      _azure_hosted_control_plane: >-
+        {{ (r_cluster_infrastructure.resources[0].status.platformStatus.type == 'Azure' and
+            r_cluster_infrastructure.resources[0].status.controlPlaneTopology | default('') == 'External') or
+           hostvars.localhost.azure_settings.hcp | default(false) | bool }}
     ansible.builtin.set_fact:
       _ocp4_workload_authentication_auth_method: >-
-        {{ 'rosa' if _cluster_type == 'rosa' else '' }}
+        {{ 'aro_hcp' if _azure_hosted_control_plane else ('rosa' if _cluster_type == 'rosa' else '') }}
 
-- name: Fail if htpasswd is selected on ROSA
+- name: Fail if htpasswd is selected on ROSA or ARO HCP
   when:
-  - _ocp4_workload_authentication_auth_method == 'rosa'
+  - _ocp4_workload_authentication_auth_method in ['rosa', 'aro_hcp']
   - ocp4_workload_authentication_provider == 'htpasswd'
   ansible.builtin.fail:
     msg: >-
-      HTPasswd authentication is not supported on ROSA clusters.
+      HTPasswd authentication is unavailable on ROSA and ARO HCP clusters.
       Set ocp4_workload_authentication_provider to 'keycloak'.
+
+- name: Require initialized deployment settings for ARO HCP
+  when: _ocp4_workload_authentication_auth_method == 'aro_hcp'
+  ansible.builtin.assert:
+    that: hostvars.localhost.azure_settings.hcp | default(false) | bool
+    fail_msg: Initialize the Azure provider with the original ARO HCP deployment variables before running this workload.
 
 - name: Setup passwords
   ansible.builtin.include_tasks: setup_passwords.yml
@@ -47,7 +59,7 @@
 - name: Remove kubeadmin user
   when:
   - ocp4_workload_authentication_remove_kubeadmin | bool
-  - _ocp4_workload_authentication_auth_method != 'rosa'
+  - _ocp4_workload_authentication_auth_method not in ['rosa', 'aro_hcp']
   ansible.builtin.include_tasks: remove_kubeadmin_user.yml
 
 - name: Remove ROSA cluster-admin user
