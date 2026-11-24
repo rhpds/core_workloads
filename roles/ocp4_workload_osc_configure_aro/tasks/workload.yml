@@ -43,6 +43,16 @@
 # Step 2: Label worker node(s) for the kata-oc pool
 # ===================================================================
 
+- name: Set kata worker label fact
+  ansible.builtin.set_fact:
+    _ocp4_workload_osc_configure_aro_kata_label: >-
+      {{
+        {
+          ocp4_workload_osc_configure_aro_kata_worker_label.split('=')[0]:
+            ocp4_workload_osc_configure_aro_kata_worker_label.split('=')[1]
+        }
+      }}
+
 - name: Get worker nodes
   kubernetes.core.k8s_info:
     api_version: v1
@@ -59,9 +69,6 @@
     quiet: true
 
 - name: Label worker node(s) for kata
-  vars:
-    _label_key: "{{ ocp4_workload_osc_configure_aro_kata_worker_label.split('=')[0] }}"
-    _label_value: "{{ ocp4_workload_osc_configure_aro_kata_worker_label.split('=')[1] }}"
   kubernetes.core.k8s:
     state: patched
     api_version: v1
@@ -69,8 +76,7 @@
     name: "{{ item.metadata.name }}"
     definition:
       metadata:
-        labels:
-          "{{ _label_key }}": "{{ _label_value }}"
+        labels: "{{ _ocp4_workload_osc_configure_aro_kata_label }}"
   loop: >-
     {{ r_worker_nodes.resources[:(ocp4_workload_osc_configure_aro_kata_worker_count | int)] }}
   loop_control:
@@ -81,9 +87,6 @@
 # ===================================================================
 
 - name: Create KataConfig
-  vars:
-    _label_key: "{{ ocp4_workload_osc_configure_aro_kata_worker_label.split('=')[0] }}"
-    _label_value: "{{ ocp4_workload_osc_configure_aro_kata_worker_label.split('=')[1] }}"
   kubernetes.core.k8s:
     state: present
     definition:
@@ -94,8 +97,7 @@
       spec:
         enablePeerPods: false
         kataConfigPoolSelector:
-          matchLabels:
-            "{{ _label_key }}": "{{ _label_value }}"
+          matchLabels: "{{ _ocp4_workload_osc_configure_aro_kata_label }}"
 
 # ===================================================================
 # Step 4: Wait for MCP and RuntimeClass
