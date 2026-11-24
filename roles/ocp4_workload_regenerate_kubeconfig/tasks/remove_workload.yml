@@ -1,0 +1,4 @@
+---
+- name: Nothing to remove
+  ansible.builtin.debug:
+    msg: "ocp4_workload_regenerate_kubeconfig has nothing to remove"
