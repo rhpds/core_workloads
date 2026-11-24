@@ -1,0 +1,61 @@
+---
+- name: Assert that a cluster-admin service account identity is published in user_data
+  ansible.builtin.assert:
+    that:
+    - (lookup('agnosticd.core.agnosticd_user_data', 'openshift_cluster_admin_token') | default('', true)) | length > 0
+    - (lookup('agnosticd.core.agnosticd_user_data', 'openshift_api_ca_cert') | default('', true)) | length > 0
+    - (lookup('agnosticd.core.agnosticd_user_data', 'openshift_api_url') | default('', true)) | length > 0
+    fail_msg: >-
+      openshift_cluster_admin_token / openshift_api_ca_cert / openshift_api_url
+      were not found in user_data. Set
+      openshift_cluster_admin_service_account_enable: true (agnosticd-v2) and
+      make sure it runs before this workload (it does, by default, from
+      configs/openshift-cluster/post_software.yml, step 005.2, which runs
+      before the workloads.yml loop).
+    quiet: true
+
+- name: Read the cluster-admin service account identity from user_data
+  ansible.builtin.set_fact:
+    _ocp4_workload_regenerate_kubeconfig_token: >-
+      {{ lookup('agnosticd.core.agnosticd_user_data', 'openshift_cluster_admin_token') }}
+    _ocp4_workload_regenerate_kubeconfig_ca_cert: >-
+      {{ lookup('agnosticd.core.agnosticd_user_data', 'openshift_api_ca_cert') }}
+    _ocp4_workload_regenerate_kubeconfig_api_url: >-
+      {{ lookup('agnosticd.core.agnosticd_user_data', 'openshift_api_url') }}
+  no_log: true
+
+- name: Regenerate the shared KUBECONFIG using the cluster-admin service account token
+  ansible.builtin.copy:
+    dest: "{{ ocp4_workload_regenerate_kubeconfig_path }}"
+    mode: u=rw,go=
+    content: |
+      apiVersion: v1
+      kind: Config
+      preferences: {}
+      clusters:
+      - name: cluster
+        cluster:
+          server: {{ _ocp4_workload_regenerate_kubeconfig_api_url }}
+          certificate-authority-data: {{ _ocp4_workload_regenerate_kubeconfig_ca_cert | b64encode }}
+      users:
+      - name: cluster-admin
+        user:
+          token: {{ _ocp4_workload_regenerate_kubeconfig_token }}
+      contexts:
+      - name: cluster-admin
+        context:
+          cluster: cluster
+          user: cluster-admin
+      current-context: cluster-admin
+  no_log: true
+
+- name: Verify the regenerated KUBECONFIG can reach the API
+  kubernetes.core.k8s_info:
+    kubeconfig: "{{ ocp4_workload_regenerate_kubeconfig_path }}"
+    api_version: v1
+    kind: Namespace
+    name: default
+  register: r_regenerate_kubeconfig_check
+  retries: 10
+  delay: 10
+  until: r_regenerate_kubeconfig_check is success
