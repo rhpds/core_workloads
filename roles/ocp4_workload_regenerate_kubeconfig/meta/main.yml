@@ -1,0 +1,34 @@
+---
+galaxy_info:
+  role_name: ocp4_workload_regenerate_kubeconfig
+  author: Red Hat, Andrew Jones (andrjone@redhat.com)
+  description: |
+    Regenerates the on-disk KUBECONFIG used by subsequent workloads so that
+    it authenticates with a stable cluster-admin ServiceAccount token
+    instead of the initial kube:admin OAuth session.
+
+    Needed on installation methods (for example ARO) that derive their
+    first kubeconfig from a kubeadmin username/password OAuth login rather
+    than a client certificate. On those clusters, OpenShift's kube:admin
+    authenticator re-validates the live kube-system/kubeadmin Secret on
+    every request, so a bearer token obtained via `oc login -u kubeadmin`
+    stops working the instant any later workload deletes that Secret (for
+    example ocp4_workload_authentication with *_remove_kubeadmin: true) --
+    even though the token was issued successfully earlier in the same run.
+    Self-managed OpenShift (IPI) never hits this because its kubeconfig
+    uses a client certificate, independent of the OAuth/kubeadmin
+    subsystem.
+
+    Requires openshift_cluster_admin_service_account_enable: true to have
+    run earlier (agnosticd-v2 openshift_cluster_admin_service_account
+    role), which publishes openshift_cluster_admin_token,
+    openshift_api_ca_cert and openshift_api_url to user_data.
+  license: MIT
+  min_ansible_version: "2.9"
+  platforms: []
+  galaxy_tags:
+  - ocp
+  - openshift
+  - kubeconfig
+  - aro
+dependencies: []
