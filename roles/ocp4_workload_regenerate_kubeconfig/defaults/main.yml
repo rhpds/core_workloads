@@ -1,0 +1,6 @@
+---
+# Path to the KUBECONFIG file shared by every workload in the
+# `workloads:` loop (see agnosticd-v2 configs/openshift-cluster/workloads.yml).
+# Overwritten in place -- do not point this at anything else.
+ocp4_workload_regenerate_kubeconfig_path: >-
+  {{ hostvars.localhost.output_dir }}/{{ config }}_{{ guid }}_kubeconfig
