@@ -1,0 +1,49 @@
+= ocp4_workload_regenerate_kubeconfig - Switch the shared KUBECONFIG to a stable identity
+
+Rewrites the on-disk KUBECONFIG file used by every workload in the
+`workloads:` loop so that it authenticates with a cluster-admin
+`ServiceAccount` token instead of the initial `kube:admin` OAuth session.
+
+== Why this is needed
+
+On installation methods that derive their first kubeconfig from a
+`kubeadmin` username/password OAuth login rather than a client certificate
+(Azure Red Hat OpenShift / ARO is the main example), OpenShift's
+`kube:admin` authenticator re-validates the live `kube-system/kubeadmin`
+`Secret` on *every* request. The bearer token baked into the shared
+KUBECONFIG file therefore stops working the instant any later workload
+deletes that Secret -- for example `ocp4_workload_authentication` (or the
+`_htpasswd`/`_keycloak`/`_rhsso` variants) with `*_remove_kubeadmin: true`
+-- even though the token was issued successfully earlier in the same run.
+Every subsequent workload then fails with `401 Unauthorized`.
+
+Self-managed OpenShift (IPI) never hits this: its kubeconfig uses a client
+certificate for `system:admin`, which is completely independent of the
+OAuth/kubeadmin subsystem.
+
+== Usage
+
+Place this workload immediately after whichever workload creates the
+long-lived identity and before anything that removes kubeadmin, for
+example:
+
+[source,yaml]
+----
+openshift_cluster_admin_service_account_enable: true   # agnosticd-v2 setting
+
+workloads:
+- agnosticd.core_workloads.ocp4_workload_regenerate_kubeconfig
+- agnosticd.core_workloads.ocp4_workload_authentication   # removes kubeadmin
+- agnosticd.core_workloads.ocp4_workload_openshift_gitops
+----
+
+== Requirements
+
+`openshift_cluster_admin_service_account_enable: true` must have run
+earlier (the agnosticd-v2 `openshift_cluster_admin_service_account` role,
+invoked from `post_software.yml` before the `workloads:` loop), which
+publishes `openshift_cluster_admin_token`, `openshift_api_ca_cert` and
+`openshift_api_url` to `user_data`. The role asserts these are present and
+fails with a clear message if not.
+
+See `defaults/main.yml` for the KUBECONFIG path variable.
