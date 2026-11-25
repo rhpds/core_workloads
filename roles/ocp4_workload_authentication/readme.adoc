@@ -7,7 +7,11 @@ See defaults/main.yml for variables to set.
 == Usage
 
 For ARO with Hosted Control Planes, set `ocp4_workload_authentication_provider: keycloak`.
-Use the original Azure deployment variables and a current administrative kubeconfig.
+Initialize the Azure provider with the original deployment variables and use a
+current administrative kubeconfig. This is also required when running the
+workload by itself against an existing ARO HCP cluster. The workload checks
+the live authentication type before using the built-in OAuth path and stops
+early on direct OIDC clusters that need provider-specific configuration.
 The role deploys the Keycloak realm and accounts, then calls the Azure collection's
 `host_ocp4_aro_hcp_external_auth` role to configure direct OIDC for the console.
 The generated user credentials are used on the Keycloak sign-in page.

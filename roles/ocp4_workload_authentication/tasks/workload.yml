@@ -28,6 +28,35 @@
       _ocp4_workload_authentication_auth_method: >-
         {{ 'aro_hcp' if _aro_hosted_control_plane else ('rosa' if _cluster_type == 'rosa' else '') }}
 
+- name: Require initialized deployment settings for ARO HCP
+  when: _ocp4_workload_authentication_auth_method == 'aro_hcp'
+  ansible.builtin.assert:
+    that:
+    - hostvars.localhost.azure_settings.method | default('') == 'aro'
+    - hostvars.localhost.azure_settings.hcp | default(false) | bool
+    fail_msg: Initialize the Azure provider with the original ARO HCP deployment variables before running this workload.
+
+- name: Check that the cluster supports the built-in OAuth configuration path
+  when: _ocp4_workload_authentication_auth_method == ''
+  block:
+
+  - name: Read the cluster authentication type
+    kubernetes.core.k8s_info:
+      api_version: config.openshift.io/v1
+      kind: Authentication
+      name: cluster
+    register: _ocp4_workload_authentication_config
+
+  - name: Require a supported backend for direct OIDC
+    ansible.builtin.assert:
+      that:
+      - _ocp4_workload_authentication_config.resources[0].spec.type | default('') != 'OIDC'
+      fail_msg: >-
+        The target cluster uses direct OIDC. For ARO HCP, initialize the Azure
+        provider with the original deployment variables before running this
+        workload. For other direct OIDC clusters, configure authentication
+        through the cluster's identity provider integration.
+
 - name: Fail if htpasswd is selected on ROSA or ARO HCP
   when:
   - _ocp4_workload_authentication_auth_method in ['rosa', 'aro_hcp']
@@ -36,14 +65,6 @@
     msg: >-
       HTPasswd authentication is unavailable on ROSA and ARO HCP clusters.
       Set ocp4_workload_authentication_provider to 'keycloak'.
-
-- name: Require initialized deployment settings for ARO HCP
-  when: _ocp4_workload_authentication_auth_method == 'aro_hcp'
-  ansible.builtin.assert:
-    that:
-    - hostvars.localhost.azure_settings.method | default('') == 'aro'
-    - hostvars.localhost.azure_settings.hcp | default(false) | bool
-    fail_msg: Initialize the Azure provider with the original ARO HCP deployment variables before running this workload.
 
 - name: Setup passwords
   ansible.builtin.include_tasks: setup_passwords.yml
