@@ -39,7 +39,6 @@
 - name: Check that the cluster supports the built-in OAuth configuration path
   when: _ocp4_workload_authentication_auth_method == ''
   block:
-
   - name: Read the cluster authentication type
     kubernetes.core.k8s_info:
       api_version: config.openshift.io/v1
