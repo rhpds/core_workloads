@@ -99,7 +99,10 @@ ocp4_workload_authentication_keycloak_host_prefix: sso
 
 ocp4_workload_authentication_keycloak_namespace: keycloak
 
-ocp4_workload_authentication_keycloak_channel: stable-v26.2
+# Use the 26.4 channel from the Red Hat catalog. Keep the 26.2 channel
+# for the bundled catalog snapshot. Set this explicitly for other snapshots.
+ocp4_workload_authentication_keycloak_channel: >-
+  {{ 'stable-v26.2' if ocp4_workload_authentication_keycloak_use_catalog_source | bool else 'stable-v26.4' }}
 ocp4_workload_authentication_keycloak_automatic_install_plan_approval: true
 ocp4_workload_authentication_keycloak_starting_csv: ""
 ocp4_workload_authentication_keycloak_use_catalog_source: false

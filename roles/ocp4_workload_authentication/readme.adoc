@@ -19,6 +19,10 @@ Azure classic and ROSA continue to use their usual integration.
 
 The role prefers the `k8s.keycloak.org/v2beta1` APIs for the Keycloak instance
 and realm import. It selects `v2alpha1` for operators that only serve that version.
+The default operator channel is `stable-v26.4` with the Red Hat catalog and
+`stable-v26.2` when a dedicated catalog source is enabled, for compatibility with
+the bundled snapshot. Set `ocp4_workload_authentication_keycloak_channel` to
+select another channel, such as `stable-v26.6`, available in your catalog.
 
 
 When configuring authentication for an RHDP service it is important to think
