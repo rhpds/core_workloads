@@ -1,4 +1,4 @@
-apiVersion: k8s.keycloak.org/{{ _ocp4_workload_authentication_keycloak_api_versions.keycloaks }}
+apiVersion: k8s.keycloak.org/{{ _ocp4_workload_authentication_keycloak_api_versions.keycloaks | default('v2beta1') }}
 kind: Keycloak
 metadata:
   name: keycloak

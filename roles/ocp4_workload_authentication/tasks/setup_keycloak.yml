@@ -83,9 +83,13 @@
   - keycloaks
   - keycloakrealmimports
   register: _ocp4_workload_authentication_keycloak_crds
-  retries: 30
-  delay: 5
-  until: _ocp4_workload_authentication_keycloak_crds.resources | default([]) | length > 0
+  retries: 120
+  delay: 10
+  until:
+  - _ocp4_workload_authentication_keycloak_crds is success
+  - >-
+    _ocp4_workload_authentication_keycloak_crds.resources[0].spec.versions | default([])
+    | selectattr('served') | selectattr('name', 'in', ['v2beta1', 'v2alpha1']) | list | length > 0
 
 - name: Select the Keycloak API versions
   vars:

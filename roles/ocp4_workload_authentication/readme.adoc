@@ -13,6 +13,9 @@ The role deploys the Keycloak realm and accounts, then calls the Azure collectio
 The generated user credentials are used on the Keycloak sign-in page.
 Azure classic and ROSA continue to use their usual integration.
 
+The role prefers the `k8s.keycloak.org/v2beta1` APIs for the Keycloak instance
+and realm import. It selects `v2alpha1` for operators that only serve that version.
+
 
 When configuring authentication for an RHDP service it is important to think
 about the relationship of authentication to the users of the service, in

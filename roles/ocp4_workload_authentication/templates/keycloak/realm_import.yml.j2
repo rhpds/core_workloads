@@ -1,5 +1,5 @@
 ---
-apiVersion: k8s.keycloak.org/{{ _ocp4_workload_authentication_keycloak_api_versions.keycloakrealmimports }}
+apiVersion: k8s.keycloak.org/{{ _ocp4_workload_authentication_keycloak_api_versions.keycloakrealmimports | default('v2beta1') }}
 kind: KeycloakRealmImport
 metadata:
   name: {{ ocp4_workload_authentication_keycloak_default_realm }}

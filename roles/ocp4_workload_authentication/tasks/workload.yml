@@ -19,13 +19,14 @@
         {{ _resource_tags | selectattr('key', 'equalto', 'red-hat-clustertype')
           | map(attribute='value') | first | default('') }}
 
-      _azure_hosted_control_plane: >-
-        {{ (r_cluster_infrastructure.resources[0].status.platformStatus.type == 'Azure' and
-            r_cluster_infrastructure.resources[0].status.controlPlaneTopology | default('') == 'External') or
-           hostvars.localhost.azure_settings.hcp | default(false) | bool }}
+      _aro_hosted_control_plane: >-
+        {{ (hostvars.localhost.azure_settings.method | default('') == 'aro' and
+            hostvars.localhost.azure_settings.hcp | default(false) | bool) or
+           (cloud_provider | default('') == 'azure' and host_ocp4_deploy_installation_method | default('') == 'aro' and
+            aro_deploy_hcp | default(false) | bool) }}
     ansible.builtin.set_fact:
       _ocp4_workload_authentication_auth_method: >-
-        {{ 'aro_hcp' if _azure_hosted_control_plane else ('rosa' if _cluster_type == 'rosa' else '') }}
+        {{ 'aro_hcp' if _aro_hosted_control_plane else ('rosa' if _cluster_type == 'rosa' else '') }}
 
 - name: Fail if htpasswd is selected on ROSA or ARO HCP
   when:
@@ -39,7 +40,9 @@
 - name: Require initialized deployment settings for ARO HCP
   when: _ocp4_workload_authentication_auth_method == 'aro_hcp'
   ansible.builtin.assert:
-    that: hostvars.localhost.azure_settings.hcp | default(false) | bool
+    that:
+    - hostvars.localhost.azure_settings.method | default('') == 'aro'
+    - hostvars.localhost.azure_settings.hcp | default(false) | bool
     fail_msg: Initialize the Azure provider with the original ARO HCP deployment variables before running this workload.
 
 - name: Setup passwords
