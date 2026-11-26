@@ -37,7 +37,9 @@
     fail_msg: Initialize the Azure provider with the original ARO HCP deployment variables before running this workload.
 
 - name: Check that the cluster supports the built-in OAuth configuration path
-  when: _ocp4_workload_authentication_auth_method == ''
+  when:
+  - ocp4_workload_authentication_provider == 'keycloak'
+  - _ocp4_workload_authentication_auth_method == ''
   block:
   - name: Read the cluster authentication type
     kubernetes.core.k8s_info:
