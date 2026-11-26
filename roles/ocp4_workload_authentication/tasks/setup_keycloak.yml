@@ -30,6 +30,7 @@
           )
         , true)
       }}
+  no_log: true
 
 # Set keycloak postgres password by generating a value with file in output_dir
 # for persistence.
@@ -89,7 +90,7 @@
   until: r_keycloak_instance is not failed
 
 - name: Create OpenShift auth resources (OAuth CRD)
-  when: _ocp4_workload_authentication_auth_method != 'rosa'
+  when: _ocp4_workload_authentication_auth_method not in ['rosa', 'aro_hcp']
   kubernetes.core.k8s:
     state: present
     template: "{{ item }}"
@@ -143,6 +144,7 @@
   - r_keycloak_credentials is defined
   - r_keycloak_credentials.resources is defined
   - r_keycloak_credentials.resources | length > 0
+  no_log: true
 
 - name: Set facts for keycloak admin
   ansible.builtin.set_fact:
@@ -150,3 +152,17 @@
       {{ r_keycloak_credentials.resources[0].data.username | b64decode }}
     _ocp4_workload_authentication_keycloak_admin_password: >-
       {{ r_keycloak_credentials.resources[0].data.password | b64decode }}
+  no_log: true
+
+- name: Configure ARO HCP external authentication with Keycloak
+  when: _ocp4_workload_authentication_auth_method == 'aro_hcp'
+  ansible.builtin.include_role:
+    name: agnosticd.cloud_provider_azure.host_ocp4_aro_hcp_external_auth
+  vars:
+    aro_hcp_external_auth_keycloak_url: >-
+      https://{{ ocp4_workload_authentication_keycloak_host_prefix }}.{{ openshift_cluster_ingress_domain }}
+    aro_hcp_external_auth_keycloak_realm: "{{ ocp4_workload_authentication_keycloak_default_realm }}"
+    aro_hcp_external_auth_keycloak_admin_username: "{{ _ocp4_workload_authentication_keycloak_admin_username }}"
+    aro_hcp_external_auth_keycloak_admin_password: "{{ _ocp4_workload_authentication_keycloak_admin_password }}"
+    aro_hcp_external_auth_client_id: "{{ ocp4_workload_authentication_keycloak_openshift_client_id }}"
+    aro_hcp_external_auth_client_secret: "{{ _ocp4_workload_authentication_keycloak_openshift_client_secret }}"

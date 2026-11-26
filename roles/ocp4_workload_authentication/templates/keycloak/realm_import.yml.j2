@@ -13,8 +13,10 @@ spec:
     registrationAllowed: {{ ocp4_workload_authentication_keycloak_enable_self_registration | bool | lower }}
     loginWithEmailAllowed: true
     duplicateEmailsAllowed: false
+{% if _ocp4_workload_authentication_auth_method != 'aro_hcp' or ocp4_workload_authentication_keycloak_clients | length > 0 %}
     clients:
-      # OpenShift OAuth client (always created)
+{% if _ocp4_workload_authentication_auth_method != 'aro_hcp' %}
+      # OpenShift OAuth client
       - clientId: {{ ocp4_workload_authentication_keycloak_openshift_client_id }}
         enabled: true
         clientAuthenticatorType: client-secret
@@ -27,6 +29,7 @@ spec:
         serviceAccountsEnabled: true
         frontchannelLogout: false
         protocol: openid-connect
+{% endif %}
 {% if ocp4_workload_authentication_keycloak_clients | length > 0 %}
       # Additional clients
 {% for client in ocp4_workload_authentication_keycloak_clients %}
@@ -52,6 +55,9 @@ spec:
         description: {{ client.description }}
 {% endif %}
 {% endfor %}
+{% endif %}
+{% else %}
+    clients: []
 {% endif %}
     roles:
       realm:

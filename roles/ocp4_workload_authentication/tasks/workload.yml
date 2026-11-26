@@ -1,6 +1,7 @@
 ---
-- name: Detect ROSA cluster
+- name: Detect the cluster authentication backend
   block:
+
   - name: Get cluster infrastructure info
     kubernetes.core.k8s_info:
       api_version: config.openshift.io/v1
@@ -17,17 +18,53 @@
       _cluster_type: >-
         {{ _resource_tags | selectattr('key', 'equalto', 'red-hat-clustertype')
           | map(attribute='value') | first | default('') }}
+
+      _aro_hosted_control_plane: >-
+        {{ (hostvars.localhost.azure_settings.method | default('') == 'aro' and
+            hostvars.localhost.azure_settings.hcp | default(false) | bool) or
+           (cloud_provider | default('') == 'azure' and host_ocp4_deploy_installation_method | default('') == 'aro' and
+            aro_deploy_hcp | default(false) | bool) }}
     ansible.builtin.set_fact:
       _ocp4_workload_authentication_auth_method: >-
-        {{ 'rosa' if _cluster_type == 'rosa' else '' }}
+        {{ 'aro_hcp' if _aro_hosted_control_plane else ('rosa' if _cluster_type == 'rosa' else '') }}
 
-- name: Fail if htpasswd is selected on ROSA
+- name: Require initialized deployment settings for ARO HCP
+  when: _ocp4_workload_authentication_auth_method == 'aro_hcp'
+  ansible.builtin.assert:
+    that:
+    - hostvars.localhost.azure_settings.method | default('') == 'aro'
+    - hostvars.localhost.azure_settings.hcp | default(false) | bool
+    fail_msg: Initialize the Azure provider with the original ARO HCP deployment variables before running this workload.
+
+- name: Check that the cluster supports the built-in OAuth configuration path
   when:
-  - _ocp4_workload_authentication_auth_method == 'rosa'
+  - ocp4_workload_authentication_provider == 'keycloak'
+  - _ocp4_workload_authentication_auth_method == ''
+  block:
+  - name: Read the cluster authentication type
+    kubernetes.core.k8s_info:
+      api_version: config.openshift.io/v1
+      kind: Authentication
+      name: cluster
+    register: _ocp4_workload_authentication_config
+
+  - name: Require a supported backend for direct OIDC
+    ansible.builtin.assert:
+      that:
+      - _ocp4_workload_authentication_config.resources[0].spec.type | default('') != 'OIDC'
+      fail_msg: >-
+        The target cluster uses direct OIDC. For ARO HCP, initialize the Azure
+        provider with the original deployment variables before running this
+        workload. For other direct OIDC clusters, configure authentication
+        through the cluster's identity provider integration.
+
+- name: Fail if htpasswd is selected on ROSA or ARO HCP
+  when:
+  - _ocp4_workload_authentication_auth_method in ['rosa', 'aro_hcp']
   - ocp4_workload_authentication_provider == 'htpasswd'
   ansible.builtin.fail:
     msg: >-
-      HTPasswd authentication is not supported on ROSA clusters.
+      HTPasswd authentication is unavailable on ROSA and ARO HCP clusters.
       Set ocp4_workload_authentication_provider to 'keycloak'.
 
 - name: Setup passwords
@@ -47,7 +84,7 @@
 - name: Remove kubeadmin user
   when:
   - ocp4_workload_authentication_remove_kubeadmin | bool
-  - _ocp4_workload_authentication_auth_method != 'rosa'
+  - _ocp4_workload_authentication_auth_method not in ['rosa', 'aro_hcp']
   ansible.builtin.include_tasks: remove_kubeadmin_user.yml
 
 - name: Remove ROSA cluster-admin user

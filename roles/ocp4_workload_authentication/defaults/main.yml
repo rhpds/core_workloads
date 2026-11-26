@@ -99,12 +99,12 @@ ocp4_workload_authentication_keycloak_host_prefix: sso
 
 ocp4_workload_authentication_keycloak_namespace: keycloak
 
-ocp4_workload_authentication_keycloak_channel: stable-v26.2
+ocp4_workload_authentication_keycloak_channel: stable-v26.6
 ocp4_workload_authentication_keycloak_automatic_install_plan_approval: true
 ocp4_workload_authentication_keycloak_starting_csv: ""
 ocp4_workload_authentication_keycloak_use_catalog_source: false
 ocp4_workload_authentication_keycloak_catalogsource_image: quay.io/rhpds/olm_snapshot_redhat_catalog
-ocp4_workload_authentication_keycloak_catalogsource_tag: v4.20_2026_02_11
+ocp4_workload_authentication_keycloak_catalogsource_tag: v4.22_2026_11_23
 
 ocp4_workload_authentication_keycloak_pgsql_user: keycloak
 # Postgres database password for keycloak. Password generated if empty.
@@ -121,7 +121,8 @@ ocp4_workload_authentication_keycloak_openshift_client_id: idp-4-ocp
 # --------------------------------
 
 # List of additional OAuth clients to create in the realm
-# The OpenShift client is always created automatically
+# The role configures the OpenShift client automatically. On ARO HCP it is
+# configured through the Keycloak Admin API after the realm is available.
 # Each client entry should have:
 #   - clientId: Client ID (required)
 #   - secret: Client secret (required)

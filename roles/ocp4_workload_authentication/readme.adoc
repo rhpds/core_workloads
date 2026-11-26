@@ -6,6 +6,25 @@ See defaults/main.yml for variables to set.
 
 == Usage
 
+For ARO with Hosted Control Planes, set `ocp4_workload_authentication_provider: keycloak`.
+Initialize the Azure provider with the original deployment variables and use a
+current administrative kubeconfig. This is also required when running the
+workload by itself against an existing ARO HCP cluster. When Keycloak uses
+the built-in OAuth path, the workload checks the live authentication type
+and stops early on direct OIDC clusters that need provider-specific configuration.
+The role deploys the Keycloak realm and accounts, then calls the Azure collection's
+`host_ocp4_aro_hcp_external_auth` role to configure direct OIDC for the console.
+The generated user credentials are used on the Keycloak sign-in page.
+Azure classic and ROSA continue to use their usual integration.
+
+The Keycloak instance and realm import use `k8s.keycloak.org/v2alpha1`.
+The operator channel defaults to `stable-v26.6` for both catalog options.
+The dedicated catalog source is disabled by default. When enabled, it uses
+`quay.io/rhpds/olm_snapshot_redhat_catalog:v4.22_2026_11_23` by default.
+Set `ocp4_workload_authentication_keycloak_channel` to select another channel
+available in your catalog.
+
+
 When configuring authentication for an RHDP service it is important to think
 about the relationship of authentication to the users of the service, in
 particular what accounts are configured and reported for the cluster itself

@@ -97,6 +97,7 @@
     data: >-
       {{ _cluster_data
        | combine(_per_user_data)
+       | combine({'login_command': _login_command} if _ocp4_workload_authentication_auth_method != 'aro_hcp' else {})
        | combine(dict(_account_keys | zip(_account_names)) if _account_names | length > 1 else {})
       }}
   loop: "{{ range(0, ocp4_workload_authentication_num_users | int) | list }}"
@@ -110,11 +111,11 @@
     _per_user_data:
       user: "{{ _account_names[0] }}"
       password: "{{ _password }}"
-      login_command: >-
-        oc login --insecure-skip-tls-verify=false
-        --username {{ _account_names[0] }}
-        --password {{ _password | quote }}
-        {{ openshift_api_url }}
+    _login_command: >-
+      oc login --insecure-skip-tls-verify=false
+      --username {{ _account_names[0] }}
+      --password {{ _password | quote }}
+      {{ openshift_api_url }}
     _user_name: >-
       {{
         ocp4_workload_authentication_user_basename ~ _user_number

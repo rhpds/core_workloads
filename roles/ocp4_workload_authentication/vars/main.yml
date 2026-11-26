@@ -22,3 +22,13 @@ _ocp4_workload_authentication_cluster_accounts: >-
       []
     ) + ocp4_workload_authentication_cluster_accounts
   }}
+
+# Internal authentication backend and platform detection from cluster metadata.
+_ocp4_workload_authentication_auth_method: ""
+_aro_hosted_control_plane: false
+
+# Internal result used to reject direct OIDC on the built-in OAuth path.
+_ocp4_workload_authentication_config: {}
+
+# Internal CLI login text for clusters that use the built-in OAuth server.
+_login_command: ""
