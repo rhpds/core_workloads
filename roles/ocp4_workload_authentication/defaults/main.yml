@@ -176,6 +176,17 @@ ocp4_workload_authentication_keycloak_clients: []
 ocp4_workload_authentication_keycloak_enable_user_info_messages: true
 
 # --------------------------------
+# API readiness wait after auth changes
+# --------------------------------
+
+# Seconds to pause after auth changes so the kube-apiserver rollout can start.
+ocp4_workload_authentication_api_wait_pause: 60
+# Number of times to retry the ClusterOperator readiness check.
+ocp4_workload_authentication_api_wait_retries: 60
+# Seconds between ClusterOperator readiness checks.
+ocp4_workload_authentication_api_wait_delay: 10
+
+# --------------------------------
 # ROSA Settings
 # --------------------------------
 
