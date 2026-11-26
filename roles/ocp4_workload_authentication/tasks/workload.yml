@@ -62,5 +62,40 @@
   failed_when: false
   changed_when: false
 
+# Changing the OAuth configuration restarts kube-apiserver. On SNO the API is
+# briefly unavailable, so wait for the cluster operators to settle before the
+# next workload touches the cluster.
+- name: Wait for the API rollout to start after auth changes
+  when: _ocp4_workload_authentication_auth_method != 'rosa'
+  ansible.builtin.pause:
+    seconds: "{{ ocp4_workload_authentication_api_wait_pause }}"
+
+- name: Wait until kube-apiserver and authentication are settled
+  when: _ocp4_workload_authentication_auth_method != 'rosa'
+  kubernetes.core.k8s_info:
+    api_version: config.openshift.io/v1
+    kind: ClusterOperator
+  register: r_ocp4_workload_authentication_clusteroperators
+  vars:
+    _clusteroperators: >-
+      {{ r_ocp4_workload_authentication_clusteroperators.resources | default([])
+         | selectattr('metadata.name', 'in', ['kube-apiserver', 'authentication'])
+         | list }}
+    _conditions: >-
+      {{ _clusteroperators | map(attribute='status.conditions', default=[])
+         | flatten | list }}
+  # Retry through API errors while kube-apiserver is restarting.
+  until:
+  - r_ocp4_workload_authentication_clusteroperators is success
+  - _clusteroperators | length == 2
+  - _conditions | selectattr('type', 'equalto', 'Available')
+    | selectattr('status', 'equalto', 'True') | list | length == 2
+  - _conditions | selectattr('type', 'equalto', 'Progressing')
+    | selectattr('status', 'equalto', 'False') | list | length == 2
+  - _conditions | selectattr('type', 'equalto', 'Degraded')
+    | selectattr('status', 'equalto', 'False') | list | length == 2
+  retries: "{{ ocp4_workload_authentication_api_wait_retries }}"
+  delay: "{{ ocp4_workload_authentication_api_wait_delay }}"
+
 - name: Report provision data and messages
   ansible.builtin.include_tasks: report_data_and_messages.yml
