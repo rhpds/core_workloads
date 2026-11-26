@@ -175,20 +175,6 @@ ocp4_workload_authentication_keycloak_clients: []
 
 ocp4_workload_authentication_keycloak_enable_user_info_messages: true
 
-# Internal authentication backend and platform detection from cluster metadata.
-_ocp4_workload_authentication_auth_method: ""
-_aro_hosted_control_plane: false
-# Internal result used to reject direct OIDC on the built-in OAuth path.
-_ocp4_workload_authentication_config: {}
-# Internal Keycloak CRD discovery. Prefer the served beta API and support older
-# operators that advertise only the alpha API.
-_ocp4_workload_authentication_keycloak_crds: {}
-_ocp4_workload_authentication_keycloak_api_versions: {}
-_ocp4_workload_authentication_keycloak_served_versions: []
-_keycloak_crd: {}
-# Internal CLI login text for clusters that use the built-in OAuth server.
-_login_command: ""
-
 # --------------------------------
 # ROSA Settings
 # --------------------------------
